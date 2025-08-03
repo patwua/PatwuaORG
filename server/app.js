@@ -9,9 +9,7 @@ const app = express();
 
 // Middleware
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://your-frontend-domain.com', 'https://www.your-frontend-domain.com']
-    : 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
