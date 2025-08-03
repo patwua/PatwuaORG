@@ -19,9 +19,13 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
+const mongoURI =
+  process.env.MONGODB_URI ||
+  'mongodb+srv://patwuablogR2:UTmHbOgQEvMrRduo@cluster0.bvvnnry.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+mongoose
+  .connect(mongoURI)
   .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // Routes
 app.use('/api/posts', require('./routes/posts'));
