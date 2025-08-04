@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
 // MongoDB Connection
 const mongoURI =
   process.env.MONGODB_URI ||
-  'mongodb+srv://patwuablogR2:UTmHbOgQEvMrRduo@cluster0.bvvnnry.mongodb.net/';
+  'mongodb+srv://patwuablogR2:zngaG3RbC6MPPIEL@cluster0.bvvnnry.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 // Explicitly specify the database name to avoid authentication errors when the
 // connection string does not include one. This value can be overridden via the
