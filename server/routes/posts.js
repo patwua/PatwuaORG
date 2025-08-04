@@ -1,10 +1,25 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Post = require('../models/Post');
+
+// Fallback content used when the database connection is unavailable
+const fallbackPosts = [
+  {
+    _id: 'placeholder-1',
+    title: 'Welcome to Patwua',
+    content: 'The database connection is currently unavailable. Please try again later.'
+  }
+];
 
 // Get all posts
 router.get('/', async (req, res) => {
   try {
+    // If MongoDB is not connected, immediately return fallback content
+    if (mongoose.connection.readyState !== 1) {
+      return res.json(fallbackPosts);
+    }
+
     const { category } = req.query;
     let posts = await Post.find().sort({ createdAt: -1 });
 
