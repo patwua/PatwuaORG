@@ -18,6 +18,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Root route for basic health check
+app.get('/', (req, res) => {
+  res.send('Patwua API is running');
+});
+
 // MongoDB Connection
 const mongoURI =
   process.env.MONGODB_URI ||
