@@ -26,9 +26,15 @@ app.get('/', (req, res) => {
 // MongoDB Connection
 const mongoURI =
   process.env.MONGODB_URI ||
-  'mongodb+srv://patwuablogR2:UTmHbOgQEvMrRduo@cluster0.bvvnnry.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+  'mongodb+srv://patwuablogR2:UTmHbOgQEvMrRduo@cluster0.bvvnnry.mongodb.net/';
+
+// Explicitly specify the database name to avoid authentication errors when the
+// connection string does not include one. This value can be overridden via the
+// MONGODB_DB environment variable.
+const mongoDBName = process.env.MONGODB_DB || 'patwua';
+
 mongoose
-  .connect(mongoURI)
+  .connect(mongoURI, { dbName: mongoDBName })
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
