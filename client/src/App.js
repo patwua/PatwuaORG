@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
 
 const API_URL = process.env.REACT_APP_API_URL || '';
@@ -23,6 +23,8 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTag, setActiveTag] = useState(null);
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const searchRef = useRef(null);
 
   const displayedPosts = activeTag
     ? posts.filter(p => Array.isArray(p.tags) && p.tags.includes(activeTag))
@@ -47,8 +49,26 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const savedTheme = localStorage.getItem('darkMode');
+    if (savedTheme === 'enabled') {
+      setDarkMode(true);
+    }
+  }, []);
+
+  useEffect(() => {
     document.body.classList.toggle('dark-mode', darkMode);
+    localStorage.setItem('darkMode', darkMode ? 'enabled' : 'disabled');
   }, [darkMode]);
+
+  useEffect(() => {
+    const handleClickOutside = e => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setSearchExpanded(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const toggleUpvote = post => {
     setPosts(prev =>
@@ -83,35 +103,56 @@ function App() {
   return (
     <>
       <header>
-        <div className="logo">
-          <i className="fas fa-comments"></i>
-          <span>PATWUA</span>
+        <div className="header-left">
+          <div className="logo">
+            <i className="fas fa-comments"></i>
+            <span>PATWUA</span>
+          </div>
+
+          <div
+            className={`search-container ${searchExpanded ? 'expanded' : ''}`}
+            ref={searchRef}
+          >
+            <i
+              className="fas fa-search search-icon"
+              onClick={e => {
+                e.stopPropagation();
+                setSearchExpanded(!searchExpanded);
+              }}
+            ></i>
+            <input type="text" className="search-bar" placeholder="Search..." />
+          </div>
+
+          <div className="auth-buttons">
+            <button className="auth-btn login-btn">Log In</button>
+            <button className="auth-btn signup-btn">Sign Up</button>
+          </div>
         </div>
 
-        <div className="header-actions">
-          <div className="search-bar">
-            <i className="fas fa-search"></i>
-            <input type="text" placeholder="Search..." />
-          </div>
+        <div className="header-right">
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <i className="fas fa-bars"></i>
+          </button>
           <button className="theme-toggle" onClick={() => setDarkMode(!darkMode)}>
             <i className={`fas ${darkMode ? 'fa-sun' : 'fa-moon'}`}></i>
           </button>
-          <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            <i className="fas fa-bars"></i>
-          </button>
-          <div className="user-avatar">JD</div>
         </div>
       </header>
 
       <div className={`mobile-menu ${mobileMenuOpen ? 'active' : ''}`}>
-        <div className="search-bar">
-          <i className="fas fa-search"></i>
-          <input type="text" placeholder="Search..." />
+        <div className="search-container expanded">
+          <i className="fas fa-search search-icon"></i>
+          <input type="text" className="search-bar" placeholder="Search..." />
         </div>
         <div className="mobile-nav">
-          <a href="#" className="btn">Home</a>
-          <a href="#" className="btn">Trending</a>
-          <a href="#" className="btn">Notifications</a>
+          <a href="#">Home</a>
+          <a href="#">Trending</a>
+          <a href="#">Notifications</a>
+          <a href="#">Log In</a>
+          <a href="#">Sign Up</a>
         </div>
       </div>
 
