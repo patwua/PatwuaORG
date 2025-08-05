@@ -2,12 +2,31 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 
 const API_URL = process.env.REACT_APP_API_URL || '';
+const TRENDING_TAGS = [
+  'Guyana',
+  'Community',
+  'Politics',
+  'Technology',
+  'Biodiversity',
+  'Science',
+  'Culture',
+  'Innovation',
+  'Sustainability',
+  'Art',
+  'Food',
+  'Education'
+];
 
 function App() {
   const [posts, setPosts] = useState([]);
   const [error, setError] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTag, setActiveTag] = useState(null);
+
+  const displayedPosts = activeTag
+    ? posts.filter(p => Array.isArray(p.tags) && p.tags.includes(activeTag))
+    : posts;
 
   useEffect(() => {
     fetch(`${API_URL}/api/posts`)
@@ -31,18 +50,34 @@ function App() {
     document.body.classList.toggle('dark-mode', darkMode);
   }, [darkMode]);
 
-  const toggleUpvote = idx => {
+  const toggleUpvote = post => {
     setPosts(prev =>
-      prev.map((p, i) => {
-        if (i !== idx) return p;
+      prev.map(p => {
+        if (p !== post) return p;
         const upvoted = !p.upvoted;
         return { ...p, upvoted, votes: p.votes + (upvoted ? 1 : -1) };
       })
     );
   };
 
-  const toggleBookmark = idx => {
-    setPosts(prev => prev.map((p, i) => (i === idx ? { ...p, bookmarked: !p.bookmarked } : p)));
+  const toggleBookmark = post => {
+    setPosts(prev => prev.map(p => (p === post ? { ...p, bookmarked: !p.bookmarked } : p)));
+  };
+
+  const loadTrendingPosts = () => {
+    console.log('Loading trending posts...');
+    clearTagFilter();
+    // In a real app, fetch trending posts from the API here
+  };
+
+  const filterPostsByTag = tag => {
+    console.log(`Filtering posts by tag: ${tag}`);
+    setActiveTag(tag);
+  };
+
+  const clearTagFilter = () => {
+    setActiveTag(null);
+    console.log('Clearing tag filter, showing all posts');
   };
 
   return (
@@ -88,6 +123,16 @@ function App() {
 
       <div className="container">
         <div className="left-column">
+          {activeTag && (
+            <div className="filter-header active">
+              <i className="fas fa-tag"></i>
+              <span>Showing posts tagged: #{activeTag}</span>
+              <button className="clear-filter" onClick={clearTagFilter}>
+                <i className="fas fa-times"></i> Clear
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="post-card">
               <p>Error: {error}</p>
@@ -100,7 +145,7 @@ function App() {
             </div>
           )}
 
-          {posts.map((post, idx) => (
+          {displayedPosts.map((post, idx) => (
             <div className="post-card" key={post._id || idx}>
               <h2>{post.title}</h2>
               <div className="post-meta">
@@ -116,7 +161,7 @@ function App() {
               <div className="post-actions">
                 <div
                   className={`action-btn upvote-btn ${post.upvoted ? 'active' : ''}`}
-                  onClick={() => toggleUpvote(idx)}
+                  onClick={() => toggleUpvote(post)}
                 >
                   <i className="fas fa-arrow-up"></i>
                   <span className="upvote-count">{post.votes}</span>
@@ -127,7 +172,7 @@ function App() {
                 </div>
                 <div
                   className={`action-btn bookmark-btn ${post.bookmarked ? 'active' : ''}`}
-                  onClick={() => toggleBookmark(idx)}
+                  onClick={() => toggleBookmark(post)}
                 >
                   <i className={`${post.bookmarked ? 'fas' : 'far'} fa-bookmark`}></i>
                   <span>{post.bookmarked ? 'Saved' : 'Save'}</span>
@@ -138,15 +183,25 @@ function App() {
         </div>
 
         <div className="right-column">
-          <div className="sidebar-section">
-            <h3><i className="fas fa-fire"></i> Trending Tags</h3>
+          <div className="sidebar-section trending-tags">
+            <div className="trending-header">
+              <h3 onClick={loadTrendingPosts}>
+                <i className="fas fa-fire"></i> Trending Tags
+              </h3>
+              <span className="view-all" style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                3 lines max
+              </span>
+            </div>
             <div className="tags-container">
-              <div className="tag">#Guyana</div>
-              <div className="tag">#Community</div>
-              <div className="tag">#Politics</div>
-              <div className="tag">#Technology</div>
-              <div className="tag">#Biodiversity</div>
-              <div className="tag">#Science</div>
+              {TRENDING_TAGS.map(tag => (
+                <div
+                  key={tag}
+                  className={`tag ${activeTag === tag ? 'active' : ''}`}
+                  onClick={() => filterPostsByTag(tag)}
+                >
+                  #{tag}
+                </div>
+              ))}
             </div>
           </div>
 
