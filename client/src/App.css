@@ -63,32 +63,73 @@ header {
     font-size: 1.5rem;
 }
 
-.header-actions {
+.header-left {
     display: flex;
     align-items: center;
     gap: 1.5rem;
 }
 
-.search-bar {
-    position: relative;
-    width: 300px;
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
-.search-bar input {
-    width: 100%;
-    padding: 0.6rem 1rem 0.6rem 2.5rem;
-    border: 1px solid var(--border);
+.auth-buttons {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.auth-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.login-btn {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+}
+
+.signup-btn {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+}
+
+.search-container {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
     border-radius: 50px;
+}
+
+.search-container.expanded {
+    width: 250px;
+    border: 1px solid var(--border);
+}
+
+.search-bar {
+    width: 100%;
+    height: 100%;
+    padding: 0 1rem 0 2.5rem;
+    border: none;
     background-color: var(--bg);
     color: var(--text);
+    outline: none;
 }
 
-.search-bar i {
+.search-icon {
     position: absolute;
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-light);
+    cursor: pointer;
+    z-index: 2;
 }
 
 .theme-toggle,
@@ -98,19 +139,17 @@ header {
     font-size: 1.2rem;
     color: var(--text);
     cursor: pointer;
-}
-
-.user-avatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-color: var(--primary);
-    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    cursor: pointer;
+}
+
+.theme-toggle:hover,
+.mobile-menu-btn:hover {
+    background-color: var(--bg);
 }
 
 /* Hero */
@@ -475,11 +514,33 @@ footer {
 .mobile-menu.active {
     transform: translateY(0);
     opacity: 1;
+    display: block;
 }
 
-.mobile-menu .search-bar {
+.mobile-menu .search-container {
     width: 100%;
     margin-bottom: 1rem;
+}
+
+.mobile-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+
+.mobile-nav a {
+    padding: 0.8rem;
+    border-radius: 5px;
+    background-color: var(--bg);
+    color: var(--text);
+    text-align: center;
+    font-weight: 500;
+}
+
+.mobile-nav a:hover {
+    background-color: var(--primary-light);
+    color: var(--primary);
 }
 
 /* Animations */
@@ -539,7 +600,7 @@ footer {
         gap: 0.5rem;
     }
 
-    .mobile-menu .search-bar {
+    .mobile-menu .search-container {
         display: block;
     }
 }
