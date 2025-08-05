@@ -157,7 +157,14 @@ function App() {
                 <span>·</span>
                 <span><i className="fas fa-eye"></i> {post.views || 0} views</span>
               </div>
-              <p>{post.excerpt || post.fullContent}</p>
+              {post.fullContent ? (
+                <div
+                  className="post-content"
+                  dangerouslySetInnerHTML={{ __html: post.fullContent }}
+                />
+              ) : (
+                <p>{post.excerpt}</p>
+              )}
               <div className="post-actions">
                 <div
                   className={`action-btn upvote-btn ${post.upvoted ? 'active' : ''}`}
