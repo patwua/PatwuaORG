@@ -4,11 +4,20 @@ const mongoose = require('mongoose');
 const Post = require('../models/Post');
 
 // Fallback content used when the database connection is unavailable
+// Includes a default welcome post from the Patwua admin
 const fallbackPosts = [
   {
-    _id: 'placeholder-1',
+    _id: 'welcome-post',
     title: 'Welcome to Patwua',
-    content: 'The database connection is currently unavailable. Please try again later.'
+    excerpt: 'Where Voices Rise and Ideas Flow',
+    fullContent:
+      'Your new home for open conversations. Read our <a href="/welcome.html">welcome message</a>.',
+    author: 'Patwua',
+    authorAvatar: 'https://patwuablog.onrender.com/images/logo_transparent_background.png',
+    votes: 0,
+    comments: 0,
+    tags: ['Welcome'],
+    createdAt: new Date().toISOString()
   }
 ];
 
