@@ -49,32 +49,34 @@ export default function PostActions({
   };
 
   return (
-    <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-between">
-      <div className="flex gap-4">
+    <div className="px-4 py-2 flex justify-between items-center border-t border-gray-200 dark:border-gray-700">
+      <div className="flex gap-1">
         <button
           onClick={toggleLike}
           disabled={isLoading}
-          className={`flex items-center gap-1 ${post.isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} hover:text-red-500 dark:hover:text-red-400 disabled:opacity-50`}
+          className={`post-action-btn ${post.isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} ${isLoading ? 'opacity-50' : ''}`}
         >
-          <HeartIcon fill={post.isLiked ? 'currentColor' : 'none'} /> {post.stats.likes}
+          <HeartIcon className="w-5 h-5" fill={post.isLiked ? 'currentColor' : 'none'} />
+          <span className="ml-1 text-sm">{post.stats.likes}</span>
         </button>
-        <button className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">
-          <ChatBubbleIcon /> {post.stats.comments}
+        <button className="post-action-btn text-gray-500 dark:text-gray-400">
+          <ChatBubbleIcon className="w-5 h-5" />
+          <span className="ml-1 text-sm">{post.stats.comments}</span>
         </button>
       </div>
-      <div className="flex gap-4">
+      <div className="flex gap-1">
         <button
           onClick={toggleBookmark}
           disabled={isLoading}
-          className={`${post.isBookmarked ? 'text-yellow-500' : 'text-gray-500 dark:text-gray-400'} hover:text-yellow-500 dark:hover:text-yellow-400 disabled:opacity-50`}
+          className={`post-action-btn ${post.isBookmarked ? 'text-yellow-500' : 'text-gray-500 dark:text-gray-400'} ${isLoading ? 'opacity-50' : ''}`}
         >
-          <BookmarkIcon fill={post.isBookmarked ? 'currentColor' : 'none'} />
+          <BookmarkIcon className="w-5 h-5" fill={post.isBookmarked ? 'currentColor' : 'none'} />
         </button>
         <button
           onClick={handleShare}
-          className="text-gray-500 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400"
+          className="post-action-btn text-gray-500 dark:text-gray-400"
         >
-          <ShareIcon />
+          <ShareIcon className="w-5 h-5" />
         </button>
       </div>
     </div>

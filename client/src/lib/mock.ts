@@ -4,24 +4,35 @@ export const mockPosts: PostType[] = [
   {
     id: '1',
     author: {
-      name: 'Jane Doe',
-      avatar: '/placeholder-avatar.jpg',
+      name: 'TravelEnthusiast',
+      avatar: '/avatars/travel.jpg',
       verified: true,
     },
     content:
-      'This is a sample post with some example content that users might share on the platform.',
+      'Just visited this amazing hidden beach in Thailand! The water was crystal clear and we had the whole place to ourselves. #travel #adventure',
     media: {
       type: 'image',
-      url: '/placeholder-post.jpg',
+      url: '/posts/beach.jpg',
     },
     stats: {
-      likes: 42,
-      comments: 7,
-      bookmarks: 3,
+      likes: 1243,
+      comments: 87,
+      bookmarks: 42,
     },
-    isLiked: false,
+    isLiked: true,
     isBookmarked: false,
-    comments: [],
-    timestamp: new Date(),
+    comments: [
+      {
+        id: 'c1',
+        author: {
+          name: 'Wanderer123',
+          avatar: '/avatars/wanderer.jpg',
+          verified: false,
+        },
+        content: 'This looks incredible! Could you share the location?',
+        timestamp: new Date(Date.now() - 3600000 * 2),
+      },
+    ],
+    timestamp: new Date(Date.now() - 3600000 * 5),
   },
 ];
