@@ -19,6 +19,8 @@ export const mockPosts: PostType[] = [
       comments: 7,
       bookmarks: 3,
     },
+    isLiked: false,
+    isBookmarked: false,
     comments: [],
     timestamp: new Date(),
   },

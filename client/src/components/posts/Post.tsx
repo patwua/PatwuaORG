@@ -11,8 +11,13 @@ export default function Post({ post }: { post: PostType }) {
       <PostHeader author={post.author} timestamp={post.timestamp} />
       <PostContent content={post.content} />
       {post.media && <PostMedia media={post.media} />}
-      <PostActions stats={post.stats} />
-      <PostComments comments={post.comments} />
+      <PostActions
+        stats={post.stats}
+        postId={post.id}
+        isLiked={post.isLiked}
+        isBookmarked={post.isBookmarked}
+      />
+      <PostComments comments={post.comments} postId={post.id} />
     </article>
   );
 }
