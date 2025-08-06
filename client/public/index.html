@@ -394,6 +394,254 @@
             font-size: 0.95rem;
         }
 
+        /* Video Post Card */
+        .post-card.video-post {
+            padding: 1.25rem;
+        }
+
+        .post-card.video-post .post-subject {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .post-card.video-post .post-author-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .post-card.video-post .author-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .post-card.video-post .author-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .post-card.video-post .author-meta {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            min-width: 0;
+        }
+
+        .post-card.video-post .author-name {
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .post-card.video-post .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.6rem;
+            line-height: 1;
+        }
+
+        .post-card.video-post .post-location {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            white-space: nowrap;
+        }
+
+        .post-card.video-post .post-location i {
+            font-size: 0.75rem;
+        }
+
+        .post-card.video-post .follow-btn {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .post-card.video-post .follow-btn:hover {
+            background-color: var(--primary-light);
+        }
+
+        .post-card.video-post .post-content {
+            margin-bottom: 1rem;
+        }
+
+        .post-card.video-post .post-content p {
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        .post-card.video-post .truncated {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .post-card.video-post .expand-toggle {
+            color: var(--primary);
+            font-size: 0.85rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 0.25rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .post-card.video-post .video-container {
+            position: relative;
+            margin: 1rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        .post-card.video-post .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+        }
+
+        .post-card.video-post .post-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .post-card.video-post .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .post-card.video-post .video-container:hover .video-controls {
+            opacity: 1;
+        }
+
+        .post-card.video-post .play-pause-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .post-card.video-post .video-progress {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .post-card.video-post .progress-bar {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0%;
+        }
+
+        .post-card.video-post .video-time {
+            color: white;
+            font-size: 0.8rem;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .post-card.video-post .post-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.75rem 0;
+        }
+
+        .post-card.video-post .post-tag {
+            color: var(--primary);
+            font-size: 0.8rem;
+        }
+
+        .post-card.video-post .post-actions {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .post-card.video-post .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .post-card.video-post .action-btn:hover {
+            background-color: var(--bg);
+        }
+
+        .post-card.video-post .action-count {
+            font-size: 0.85rem;
+        }
+
+        .post-card.video-post .like-btn.active,
+        .post-card.video-post .bookmark-btn.active {
+            color: var(--primary);
+        }
+
+        .post-card.video-post .like-btn.active i {
+            font-weight: 900;
+        }
+
+        .post-card.video-post .bookmark-btn.active i {
+            font-weight: 900;
+        }
+
         /* Sidebar Sections */
         .sidebar-section {
             background-color: var(--card-bg);
@@ -1077,8 +1325,68 @@
                     </div>
                 </div>
             </div>
+            <!-- Video Post Card -->
+            <div class="post-card video-post">
+                <h2 class="post-subject">Tokyo Skytree at Sunset - Nightlife Scene</h2>
+                <div class="post-author-row">
+                    <div class="author-avatar">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop" alt="Alex Rivera">
+                    </div>
+                    <div class="author-meta">
+                        <span class="author-name">Alex Rivera</span>
+                        <span class="verified-badge">✓</span>
+                        <span class="post-timestamp">2 hours ago</span>
+                        <span class="post-location"><i class="fas fa-map-marker-alt"></i> Tokyo Skytree, Japan</span>
+                    </div>
+                    <button class="follow-btn">Follow</button>
+                </div>
+                <div class="post-content">
+                    <p class="truncated">Just captured this incredible moment at the Tokyo Skytree! 🗼 The way the sunset paints the city in golden hues is absolutely breathtaking. You can see Mount Fuji in the distance on clear days like this. The video doesn't do it justice - the entire observation deck was silent as everyone watched this magical moment unfold...</p>
+                    <button class="expand-toggle">Read more</button>
+                </div>
+                <div class="post-media video-container">
+                    <div class="video-wrapper">
+                        <video class="post-video" poster="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=400&fit=crop">
+                            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+                        </video>
+                        <div class="video-controls">
+                            <button class="play-pause-btn">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <div class="video-progress">
+                                <div class="progress-bar"></div>
+                            </div>
+                            <div class="video-time">0:45</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="post-tags">
+                    <span class="post-tag">#Tokyo</span>
+                    <span class="post-tag">#Skytree</span>
+                    <span class="post-tag">#Sunset</span>
+                    <span class="post-tag">#Japan</span>
+                    <span class="post-tag">#Travel</span>
+                </div>
+                <div class="post-actions">
+                    <button class="action-btn like-btn">
+                        <i class="far fa-heart"></i>
+                        <span class="action-count">5.4K</span>
+                    </button>
+                    <button class="action-btn">
+                        <i class="far fa-comment"></i>
+                        <span class="action-count">234</span>
+                    </button>
+                    <button class="action-btn">
+                        <i class="far fa-share"></i>
+                        <span class="action-count">156</span>
+                    </button>
+                    <button class="action-btn bookmark-btn">
+                        <i class="far fa-bookmark"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-        
+
         <!-- Right Column -->
         <div class="right-column">
             <!-- Trending Tags -->
@@ -1581,6 +1889,48 @@
                 document.body.style.overflow = 'auto';
             }
         });
+
+        // Video post interactions
+        const videoPost = document.querySelector('.post-card.video-post');
+        if (videoPost) {
+            const video = videoPost.querySelector('.post-video');
+            const playBtn = videoPost.querySelector('.play-pause-btn');
+            const progressBar = videoPost.querySelector('.progress-bar');
+
+            playBtn.addEventListener('click', function() {
+                if (video.paused) {
+                    video.play();
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                } else {
+                    video.pause();
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            });
+
+            video.addEventListener('timeupdate', function() {
+                const progress = (video.currentTime / video.duration) * 100;
+                progressBar.style.width = progress + '%';
+            });
+
+            const likeBtn = videoPost.querySelector('.like-btn');
+            const bookmarkBtn = videoPost.querySelector('.bookmark-btn');
+
+            likeBtn.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+
+            bookmarkBtn.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+
+            const expandToggle = videoPost.querySelector('.expand-toggle');
+            const postContent = videoPost.querySelector('.post-content p');
+
+            expandToggle.addEventListener('click', function() {
+                postContent.classList.toggle('truncated');
+                this.textContent = postContent.classList.contains('truncated') ? 'Read more' : 'Show less';
+            });
+        }
     </script>
 </body>
 </html>
