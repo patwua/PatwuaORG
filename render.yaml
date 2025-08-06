@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: patwua
+    runtime: node
+    buildCommand: cd client && npm run render-build
+    startCommand: cd client && npm run start
+    env: node
+    staticPublishPath: "./client/build"
+
