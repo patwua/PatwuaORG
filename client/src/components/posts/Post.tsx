@@ -7,10 +7,14 @@ import type { PostType } from '@/types/post';
 
 export default function Post({ post }: { post: PostType }) {
   return (
-    <article className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6 transition-all hover:shadow-md">
+    <article className="post-card mb-6">
       <PostHeader author={post.author} timestamp={post.timestamp} />
       <PostContent content={post.content} />
-      {post.media && <PostMedia media={post.media} />}
+      {post.media && (
+        <div className="px-4 pb-4">
+          <PostMedia media={post.media} />
+        </div>
+      )}
       <PostActions
         stats={post.stats}
         postId={post.id}
