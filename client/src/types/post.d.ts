@@ -13,6 +13,8 @@ export interface PostType {
     comments: number;
     bookmarks: number;
   };
+  isLiked?: boolean;
+  isBookmarked?: boolean;
   comments: Comment[];
   timestamp: Date;
 }
