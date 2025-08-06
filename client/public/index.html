@@ -577,27 +577,6 @@
             color: var(--text-light);
         }
         
-        .view-more {
-            text-align: center;
-            margin-top: 0.5rem;
-        }
-        
-        .view-more-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            font-size: 0.75rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-            margin: 0 auto;
-        }
-        
-        .view-more-btn i {
-            font-size: 0.7rem;
-        }
-
         /* User Profile Card */
         .profile-card {
             text-align: center;
@@ -1069,7 +1048,6 @@
                     <h3 id="trendingTitle">
                         <i class="fas fa-fire"></i> Trending Tags
                     </h3>
-                    <span class="view-all" style="font-size: 0.75rem; color: var(--text-light);">3 lines max</span>
                 </div>
                 <div class="tags-container" id="trendingTags">
                     <div class="tag" data-tag="Guyana">#Guyana</div>
@@ -1093,15 +1071,9 @@
                     <h3>
                         <i class="fas fa-comment-dots"></i> Latest Comments
                     </h3>
-                    <span class="view-all" style="font-size: 0.7rem; color: var(--text-light);">Live Updates</span>
                 </div>
                 <div class="comments-container" id="commentsContainer">
                     <!-- Comments loaded via JavaScript -->
-                </div>
-                <div class="view-more">
-                    <button class="view-more-btn" id="viewMoreBtn">
-                        <i class="fas fa-chevron-down"></i> View More Comments
-                    </button>
                 </div>
             </div>
             
@@ -1305,7 +1277,6 @@
         
         // Latest Comments Functionality
         const commentsContainer = document.getElementById('commentsContainer');
-        const viewMoreBtn = document.getElementById('viewMoreBtn');
         
         // Sample comments data
         let allComments = [
@@ -1359,12 +1330,6 @@
         
         // Auto-refresh every 30 seconds
         setInterval(fetchLatestComments, 30000);
-        
-        // View More handler
-        viewMoreBtn.addEventListener('click', () => {
-            // In a real app, this would open a modal or expand the section
-            alert('This would open the full comments view in your implementation');
-        });
         
         // Function to fetch latest comments
         function fetchLatestComments() {
