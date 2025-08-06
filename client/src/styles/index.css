@@ -2,26 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-@theme {
-  --color-primary: #4361ee;
-  --color-primary-dark: #3a56d4;
-  --color-primary-light: #edf2fe;
-  --color-text: #2b2d42;
-  --color-text-light: #8d99ae;
-  --color-bg: #f8f9fa;
-  --color-card: #ffffff;
-  --color-border: #e9ecef;
-  --spacing-4: 1rem;
+:root {
+  --bg: #f8f9fa;
+  --text: #212529;
+  --card: #ffffff;
+  --border: #dee2e6;
 }
 
-@layer base {
-  body {
-    @apply bg-bg text-text min-h-screen;
-  }
+.dark {
+  --bg: #121212;
+  --text: #f8f9fa;
+  --card: #1e1e1e;
+  --border: #333;
 }
 
-@layer components {
-  .container {
-    @apply mx-auto px-4;
-  }
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: all 0.3s ease;
+}
+
+.card {
+  background-color: var(--card);
+  border: 1px solid var(--border);
 }
