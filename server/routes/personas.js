@@ -33,6 +33,7 @@ router.post('/', authRequired, adminOnly, async (req, res) => {
     })
     res.status(201).json(persona)
   } catch (e) {
+    if (e?.code === 11000) return res.status(409).json({ error: 'Persona name already exists' })
     res.status(500).json({ error: 'Failed to create persona' })
   }
 })
@@ -47,14 +48,14 @@ router.patch('/:id', authRequired, adminOnly, async (req, res) => {
       await Persona.updateMany({ ownerUserId: req.user.id, isDefault: true }, { $set: { isDefault: false } })
     }
 
-    const persona = await Persona.findByIdAndUpdate(
-      id,
-      { $set: { ...(name !== undefined && { name }), ...(bio !== undefined && { bio }), ...(avatar !== undefined && { avatar }), ...(isDefault !== undefined && { isDefault: !!isDefault }) } },
-      { new: true }
-    )
+    const $set = { ...(bio !== undefined && { bio }), ...(avatar !== undefined && { avatar }), ...(isDefault !== undefined && { isDefault: !!isDefault }) }
+    if (name !== undefined) { $set.name = name; $set.nameLower = String(name).toLowerCase().trim() }
+
+    const persona = await Persona.findByIdAndUpdate(id, { $set }, { new: true, runValidators: true })
     if (!persona) return res.status(404).json({ error: 'Not found' })
     res.json(persona)
-  } catch {
+  } catch (e) {
+    if (e?.code === 11000) return res.status(409).json({ error: 'Persona name already exists' })
     res.status(500).json({ error: 'Failed to update persona' })
   }
 })
