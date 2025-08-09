@@ -1,64 +1,107 @@
-const express = require('express');
-const router = express.Router();
-const mongoose = require('mongoose');
-const Post = require('../models/Post');
+const express = require('express')
+const Post = require('../models/Post')
+const Persona = require('../models/Persona')
+const { authRequired } = require('../middleware/auth')
 
-// Fallback content used when the database connection is unavailable
-// Includes a default welcome post from the Patwua admin
-const fallbackPosts = [
-  {
-    _id: 'welcome-post',
-    title: 'Welcome to Patwua',
-    excerpt: 'Where Voices Rise and Ideas Flow',
-    fullContent:
-      'Your new home for open conversations. Read our <a href="/welcome.html">welcome message</a>.',
-    author: 'Patwua',
-    authorAvatar: 'https://patwuablog.onrender.com/images/logo_transparent_background.png',
-    votes: 0,
-    comments: 0,
-    tags: ['Welcome'],
-    createdAt: new Date().toISOString()
-  }
-];
+const router = express.Router()
 
-// Get all posts
+// GET /api/posts?status=published  (public feed endpoint)
 router.get('/', async (req, res) => {
   try {
-    // If MongoDB is not connected, immediately return fallback content
-    if (mongoose.connection.readyState !== 1) {
-      return res.json(fallbackPosts);
-    }
-
-    const { category } = req.query;
-    let posts = await Post.find().sort({ createdAt: -1 });
-
-    if (category === 'trending') {
-      posts = posts.sort((a, b) => (b.votes * 2 + b.comments * 3) - (a.votes * 2 + a.comments * 3));
-    } else if (category === 'following') {
-      // Implement following logic based on user's follow list
-    }
-
-    res.json(posts);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const status = (req.query.status || 'published').toString()
+    const cursor = Post.find({ status })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean()
+    const items = await cursor
+    res.json(items)
+  } catch {
+    res.status(500).json({ error: 'Failed to list posts' })
   }
-});
+})
 
-// Vote on a post
-router.patch('/:id/vote', async (req, res) => {
+// POST /api/posts  (create draft or submit/publish depending on role + action)
+router.post('/', authRequired, async (req, res) => {
   try {
-    const { voteType } = req.body;
-    const post = await Post.findById(req.params.id);
+    const { title, body, tags = [], personaId, action } = req.body || {}
+    if (!title || title.trim().length < 3) return res.status(400).json({ error: 'Title too short' })
+    if (!body || body.trim().length < 20) return res.status(400).json({ error: 'Body too short' })
+    if (!personaId) return res.status(400).json({ error: 'personaId required' })
 
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    // ensure persona exists
+    const persona = await Persona.findById(personaId)
+    if (!persona) return res.status(404).json({ error: 'Persona not found' })
 
-    post.votes += voteType === 'up' ? 1 : -1;
-    await post.save();
+    let status = 'draft'
+    if (req.user.role === 'admin' && action === 'publish') status = 'published'
+    else if (action === 'submit') status = 'pending_review'
 
-    res.json(post);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+    const post = await Post.create({
+      title, body, tags, personaId,
+      authorUserId: req.user.id,
+      status
+    })
+
+    res.status(201).json(post)
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to create post' })
   }
-});
+})
 
-module.exports = router;
+// PATCH /api/posts/:id  (update title/body/tags while draft or pending)
+router.patch('/:id', authRequired, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { title, body, tags } = req.body || {}
+    const post = await Post.findById(id)
+    if (!post) return res.status(404).json({ error: 'Not found' })
+    if (!['draft', 'pending_review'].includes(post.status)) {
+      return res.status(400).json({ error: 'Only drafts or pending posts can be edited' })
+    }
+    if (post.authorUserId.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    if (title !== undefined) post.title = title
+    if (body  !== undefined) post.body  = body
+    if (tags  !== undefined) post.tags  = tags
+    await post.save()
+    res.json(post)
+  } catch {
+    res.status(500).json({ error: 'Failed to update post' })
+  }
+})
+
+// PATCH /api/posts/:id/submit  (author -> pending_review)
+router.patch('/:id/submit', authRequired, async (req, res) => {
+  try {
+    const { id } = req.params
+    const post = await Post.findById(id)
+    if (!post) return res.status(404).json({ error: 'Not found' })
+    if (post.authorUserId.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    post.status = 'pending_review'
+    await post.save()
+    res.json(post)
+  } catch {
+    res.status(500).json({ error: 'Failed to submit post' })
+  }
+})
+
+// PATCH /api/posts/:id/publish  (admin only)
+router.patch('/:id/publish', authRequired, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
+    const { id } = req.params
+    const post = await Post.findById(id)
+    if (!post) return res.status(404).json({ error: 'Not found' })
+    post.status = 'published'
+    await post.save()
+    res.json(post)
+  } catch {
+    res.status(500).json({ error: 'Failed to publish post' })
+  }
+})
+
+module.exports = router

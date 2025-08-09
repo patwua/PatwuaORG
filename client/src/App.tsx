@@ -5,11 +5,13 @@ import PersonaSwitcher from './components/PersonaSwitcher'
 import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
 import AuthModal from './components/AuthModal'
+import PostEditor from './components/PostEditor'
 import { useAuth } from './context/AuthContext'
+import { usePersona } from './context/PersonaContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 
-function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
+function Header({ onOpenAuth, onOpenEditor }: { onOpenAuth: () => void; onOpenEditor: () => void }) {
   const { user, logout } = useAuth()
   const [dark, setDark] = useState(false)
   useEffect(() => {
@@ -39,6 +41,10 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
         {user ? (
           <>
             <span className="text-sm hidden sm:inline">Hi, {user.name}</span>
+            <button onClick={onOpenEditor} className="ml-2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-600 text-white hover:bg-orange-700">
+              <PenSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">New Post</span>
+            </button>
             <button onClick={logout} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
               Logout
             </button>
@@ -56,10 +62,12 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
 
 
 export default function App() {
+  usePersona()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAuth, setShowAuth] = useState(false)
+  const [showEditor, setShowEditor] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -89,7 +97,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
-      <Header onOpenAuth={() => setShowAuth(true)} />
+      <Header onOpenAuth={() => setShowAuth(true)} onOpenEditor={() => setShowEditor(true)} />
       <section className="bg-gradient-to-br from-orange-100 via-amber-50 to-white dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 border-b border-orange-100/70 dark:border-neutral-800">
         <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Where Every Voice Has a Place</h1>
@@ -157,6 +165,7 @@ export default function App() {
 
       <BottomNav />
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      {showEditor && <PostEditor onClose={() => setShowEditor(false)} onCreated={() => { setShowEditor(false); /* optionally refresh list */ }} />}
     </div>
   )
 }
