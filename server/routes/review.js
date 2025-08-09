@@ -31,6 +31,9 @@ router.patch('/posts/:id/approve', async (req, res) => {
     const post = await Post.findById(id)
     if (!post) return res.status(404).json({ error: 'Not found' })
     post.status = 'published'
+    post.moderatorNote = ''
+    post.reviewedByUserId = req.user.id
+    post.reviewedAt = new Date()
     await post.save()
     res.json(post)
   } catch {
@@ -42,9 +45,13 @@ router.patch('/posts/:id/approve', async (req, res) => {
 router.patch('/posts/:id/reject', async (req, res) => {
   try {
     const { id } = req.params
+    const { note = '' } = req.body || {}
     const post = await Post.findById(id)
     if (!post) return res.status(404).json({ error: 'Not found' })
     post.status = 'draft'
+    post.moderatorNote = String(note || '')
+    post.reviewedByUserId = req.user.id
+    post.reviewedAt = new Date()
     await post.save()
     res.json(post)
   } catch {

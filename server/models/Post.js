@@ -17,7 +17,11 @@ const PostSchema = new mongoose.Schema(
     stats: {
       comments: { type: Number, default: 0 },
       votes:    { type: Number, default: 0 }
-    }
+    },
+    // moderation metadata (optional)
+    moderatorNote: { type: String, default: '' },
+    reviewedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    reviewedAt: { type: Date, default: null }
   },
   { timestamps: true }
 )
