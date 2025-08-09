@@ -45,3 +45,37 @@ body {
     @apply before:rotate-45 before:rounded-sm;
   }
 }
+
+/* === Patwua warm brand tokens === */
+:root {
+  --brand-bg: 255 251 247;      /* warm paper */
+  --brand-surface: 255 255 255; /* white cards */
+  --brand-ink: 23 23 23;        /* near-black */
+  --brand-primary: 234 88 12;   /* #EA580C */
+  --brand-primary-600: 194 65 12; /* #C2410C */
+  --brand-primary-700: 180 83 9;  /* #B45309 */
+  --brand-accent: 245 158 11;   /* #F59E0B */
+  --brand-muted: 100 116 139;   /* slate-500 */
+  --brand-muted-700: 71 85 105; /* slate-600/700 */
+  --brand-ring: 251 146 60;     /* orange-400 */
+  --brand-success: 16 185 129;  /* emerald-500 */
+  --brand-danger: 239 68 68;    /* red-500 */
+}
+
+html { background-color: rgb(var(--brand-bg)); }
+
+/* Utilities/components layered for correct precedence */
+@layer components {
+  .card { @apply rounded-2xl shadow-sm bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800/60; }
+  .card-hover { @apply transition hover:shadow-md hover:border-neutral-300/70 dark:hover:border-neutral-700/70; }
+  .focus-ring { @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400/90 focus:ring-offset-orange-50 dark:focus:ring-offset-neutral-900; }
+  .tag-chip { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-50 text-orange-700 border border-orange-100; }
+}
+
+/* Bottom nav safe-area on iOS */
+@supports (padding: max(0px)) {
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+}
+
+/* Dark mode body */
+.dark html, .dark body { background-color: #0a0a0a; }
