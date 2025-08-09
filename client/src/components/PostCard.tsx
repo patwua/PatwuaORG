@@ -1,16 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCheck, ArrowBigUp, ArrowBigDown, MessageSquareText, Bookmark, Share2 } from 'lucide-react'
 import TagChips from './TagChips'
-
-export type Post = {
-  id: string
-  title: string
-  excerpt?: string
-  tags?: string[]
-  author?: { name: string; verified?: boolean }
-  stats?: { comments: number; votes: number }
-  createdAt?: string
-}
+import type { Post } from '../types/post'
 
 export default function PostCard({ post }: { post: Post }) {
   const [relative, setRelative] = useState<string>('just now')

@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Moon, SunMedium, PenSquare } from 'lucide-react'
 import Search from './components/Search'
 import BottomNav from './components/BottomNav'
-import PostCard, { type Post } from './components/PostCard'
+import PostCard from './components/PostCard'
+import type { Post } from './types/post'
+import { getPosts } from './lib/api'
 
 function Header() {
   const [dark, setDark] = useState(false)
@@ -40,26 +42,27 @@ function Header() {
 
 
 export default function App() {
-  const [posts] = useState<Post[]>([
-    {
-      id: '1',
-      title: 'President Ali launches Clean Energy Initiative',
-      excerpt: 'A quick summary of the initiative and expected outcomes across regions 1–10...',
-      tags: ['Guyana', 'GreenEnergy'],
-      author: { name: 'WaterNews', verified: true },
-      stats: { comments: 23, votes: 128 },
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      title: 'Guyanese Artists Win Big at Caribbean Awards',
-      excerpt: 'Highlights from the ceremony and who to watch next season...',
-      tags: ['Culture', 'Awards'],
-      author: { name: 'WaterNews', verified: true },
-      stats: { comments: 8, votes: 67 },
-      createdAt: new Date(Date.now() - 3600_000).toISOString(),
-    },
-  ])
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        setLoading(true)
+        const data = await getPosts()
+        if (alive) setPosts(data)
+      } catch (e: any) {
+        if (alive) setError(e?.message || 'Failed to load posts')
+      } finally {
+        if (alive) setLoading(false)
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [])
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
@@ -74,7 +77,24 @@ export default function App() {
       <main className="mx-auto max-w-6xl px-4 pt-4 pb-24 md:pb-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <section className="md:col-span-2 space-y-4 md:space-y-6">
-            {posts.map(p => <PostCard key={p.id} post={p} />)}
+            {loading && (
+              <div className="card p-6 animate-pulse">
+                <div className="h-5 w-40 bg-neutral-200 dark:bg-neutral-800 rounded mb-3" />
+                <div className="h-4 w-3/4 bg-neutral-200 dark:bg-neutral-800 rounded" />
+              </div>
+            )}
+            {error && (
+              <div className="card p-4 border-red-200 text-red-700">
+                <div className="font-semibold mb-1">Couldn’t load posts</div>
+                <div className="text-sm opacity-90">{error}</div>
+              </div>
+            )}
+            {!loading && !error && posts.length === 0 && (
+              <div className="card p-6 text-sm text-neutral-600 dark:text-neutral-300">
+                No posts yet. Be the first to start the conversation.
+              </div>
+            )}
+            {!loading && !error && posts.map(p => <PostCard key={p.id} post={p} />)}
           </section>
           <aside className="md:sticky md:top-20 md:h-[calc(100vh-6rem)] md:overflow-auto space-y-4 md:space-y-6">
             <div className="card card-hover p-4 md:p-5">
