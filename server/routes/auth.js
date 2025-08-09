@@ -1,54 +1,45 @@
-const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcryptjs');
-const User = require('../models/User');
-const auth = require('../middleware/auth');
+const express = require('express')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+const User = require('../models/User')
 
-// Register
+const router = express.Router()
+const SALT_ROUNDS = 10
+
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
-
-    // Validate input
-    if (!username || !email || !password) {
-      return res.status(400).json({ message: 'Please provide all fields' });
-    }
-
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    const user = new User({ username, email, password });
-    await user.save();
-
-    const token = user.generateAuthToken();
-    res.status(201).json({ token, user: { id: user._id, username, avatar: user.avatar } });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    const { email, name, password } = req.body || {}
+    if (!email || !name || !password) return res.status(400).json({ error: 'email, name, password required' })
+    const exists = await User.findOne({ email })
+    if (exists) return res.status(409).json({ error: 'Email already in use' })
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
+    const user = await User.create({ email, name, passwordHash })
+    res.status(201).json({ id: user._id, email: user.email, name: user.name })
+  } catch (e) {
+    res.status(500).json({ error: 'Registration failed' })
   }
-});
+})
 
-// Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    const { email, password } = req.body || {}
+    if (!email || !password) return res.status(400).json({ error: 'email and password required' })
+    const user = await User.findOne({ email })
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(401).json({ error: 'Invalid credentials' })
     }
-
-    const token = user.generateAuthToken();
-    res.json({ token, user: { id: user._id, username: user.username, avatar: user.avatar } });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    const payload = { id: user._id.toString(), email: user.email, name: user.name, role: user.role }
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' })
+    res.json({ token, user: payload })
+  } catch {
+    res.status(500).json({ error: 'Login failed' })
   }
-});
+})
 
-// Get current user
-router.get('/me', auth, async (req, res) => {
-  res.json(req.user);
-});
+router.get('/me', (req, res) => {
+  // handy for debugging — pair with authRequired if you want protection here
+  res.json({ ok: true })
+})
 
-module.exports = router;
+module.exports = router
+

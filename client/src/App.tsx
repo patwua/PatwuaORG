@@ -3,11 +3,15 @@ import { Moon, SunMedium, PenSquare } from 'lucide-react'
 import Search from './components/Search'
 import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
+import AuthModal from './components/AuthModal'
+import { useAuth } from './context/AuthContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 
 function Header() {
+  const { user, logout } = useAuth()
   const [dark, setDark] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
   useEffect(() => {
     const root = document.documentElement
     const saved = localStorage.getItem('patwua-theme')
@@ -31,11 +35,21 @@ function Header() {
         <button onClick={toggleTheme} className="ml-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Toggle theme">
           {dark ? <SunMedium className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
-        <a href="#" className="ml-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-600 text-white hover:bg-orange-700">
-          <PenSquare className="h-4 w-4" />
-          <span className="hidden sm:inline">Post</span>
-        </a>
+        {user ? (
+          <>
+            <span className="text-sm hidden sm:inline">Hi, {user.name}</span>
+            <button onClick={logout} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
+              Logout
+            </button>
+          </>
+        ) : (
+          <button onClick={() => setShowAuth(true)} className="ml-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-600 text-white hover:bg-orange-700">
+            <PenSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">Sign in</span>
+          </button>
+        )}
       </div>
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </header>
   )
 }
