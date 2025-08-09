@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
 const setupWebSocket = require('./websocket');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 
@@ -44,7 +45,8 @@ mongoose
 
 // Routes
 app.use('/api/posts', require('./routes/posts'));
-app.use('/api/auth', require('./routes/auth'));
+// expose auth endpoints
+app.use('/api/auth', authRoutes);
 
 // Error handling
 app.use(errorHandler);
