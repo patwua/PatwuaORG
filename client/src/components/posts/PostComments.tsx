@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronDownIcon } from '@/components/icons';
+import { avatarUrl } from '@/lib/upload';
 import type { Comment } from '@/types/post';
 
 export default function PostComments({
@@ -56,7 +57,7 @@ export default function PostComments({
           {allComments.map((comment) => (
             <div key={comment.id} className="flex gap-3">
               <Avatar className="mt-1 flex-shrink-0">
-                <AvatarImage src={comment.author.avatar} />
+                <AvatarImage src={avatarUrl(comment.author.avatar || '')} />
                 <AvatarFallback>{comment.author.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
@@ -86,7 +87,7 @@ export default function PostComments({
       <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex gap-2">
           <Avatar className="flex-shrink-0">
-            <AvatarImage src="/current-user.jpg" />
+            <AvatarImage src={avatarUrl('/current-user.jpg')} />
             <AvatarFallback>Y</AvatarFallback>
           </Avatar>
           <div className="flex-1 relative">

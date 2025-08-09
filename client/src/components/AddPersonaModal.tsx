@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPersona } from '../lib/persona'
 import { usePersona } from '../context/PersonaContext'
+import { uploadImage, avatarUrl } from '../lib/upload'
 
 export default function AddPersonaModal({ onClose }: { onClose: () => void }) {
   const { reload, setSelectedId } = usePersona()
@@ -10,6 +11,22 @@ export default function AddPersonaModal({ onClose }: { onClose: () => void }) {
   const [isDefault, setIsDefault] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadImage(file, 'patwua/personas')
+      setAvatar(url)
+    } catch (err: any) {
+      setError(err?.message || 'Upload failed')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
 
   async function save() {
     setSaving(true); setError(null)
@@ -36,6 +53,15 @@ export default function AddPersonaModal({ onClose }: { onClose: () => void }) {
           </div>
           {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
           <input className="w-full h-10 rounded-md border px-3 bg-white dark:bg-neutral-900 mb-2" placeholder="Persona name (must be unique)" value={name} onChange={e => setName(e.target.value)} />
+          <div className="mb-2 flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full overflow-hidden bg-neutral-200">
+              {avatar ? <img src={avatarUrl(avatar)} alt="persona" className="h-full w-full object-cover" /> : null}
+            </div>
+            <label className="text-sm inline-flex items-center gap-2 cursor-pointer">
+              <input type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+              <span className="px-3 py-1.5 rounded-md border">{uploading ? 'Uploading…' : 'Upload avatar'}</span>
+            </label>
+          </div>
           <input className="w-full h-10 rounded-md border px-3 bg-white dark:bg-neutral-900 mb-2" placeholder="Avatar URL (optional)" value={avatar} onChange={e => setAvatar(e.target.value)} />
           <textarea className="w-full min-h-[100px] rounded-md border p-3 bg-white dark:bg-neutral-900 mb-2" placeholder="Short bio (optional)" value={bio} onChange={e => setBio(e.target.value)} />
           <label className="flex items-center gap-2 text-sm">
