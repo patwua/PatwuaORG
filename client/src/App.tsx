@@ -4,7 +4,7 @@ import Search from './components/Search'
 import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
 import type { Post } from './types/post'
-import { getPosts } from './lib/api'
+import { getPosts, votePost } from './lib/api'
 
 function Header() {
   const [dark, setDark] = useState(false)
@@ -64,6 +64,14 @@ export default function App() {
     }
   }, [])
 
+  async function onVote(id: string, dir: 'up' | 'down') {
+    const { votes } = await votePost(id, dir)
+    setPosts(prev =>
+      prev.map(p => (p.id === id ? { ...p, stats: { ...(p.stats || { comments: 0, votes: 0 }), votes } } : p))
+    )
+    return votes
+  }
+
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
       <Header />
@@ -94,7 +102,7 @@ export default function App() {
                 No posts yet. Be the first to start the conversation.
               </div>
             )}
-            {!loading && !error && posts.map(p => <PostCard key={p.id} post={p} />)}
+            {!loading && !error && posts.map(p => <PostCard key={p.id} post={p} onVote={onVote} />)}
           </section>
           <aside className="md:sticky md:top-20 md:h-[calc(100vh-6rem)] md:overflow-auto space-y-4 md:space-y-6">
             <div className="card card-hover p-4 md:p-5">

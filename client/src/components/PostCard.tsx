@@ -3,8 +3,16 @@ import { CheckCheck, ArrowBigUp, ArrowBigDown, MessageSquareText, Bookmark, Shar
 import TagChips from './TagChips'
 import type { Post } from '../types/post'
 
-export default function PostCard({ post }: { post: Post }) {
+export default function PostCard({
+  post,
+  onVote,
+}: {
+  post: Post
+  onVote?: (id: string, dir: 'up' | 'down') => Promise<number | void> | void
+}) {
   const [relative, setRelative] = useState<string>('just now')
+  const [pending, setPending] = useState<'up' | 'down' | null>(null)
+  const [optimistic, setOptimistic] = useState<number | null>(null)
   useEffect(() => {
     if (!post.createdAt) return
     const then = new Date(post.createdAt)
@@ -16,6 +24,22 @@ export default function PostCard({ post }: { post: Post }) {
     else if (abs < 60 * 24) setRelative(fmt.format(-Math.round(diffMin / 60), 'hour'))
     else setRelative(fmt.format(-Math.round(diffMin / (60 * 24)), 'day'))
   }, [post.createdAt])
+
+  async function handleVote(dir: 'up' | 'down') {
+    if (pending) return
+    const current = post.stats?.votes ?? 0
+    const delta = dir === 'up' ? 1 : -1
+    setPending(dir)
+    setOptimistic(current + delta)
+    try {
+      const next = await onVote?.(post.id, dir)
+      if (typeof next === 'number') setOptimistic(next)
+    } catch (e) {
+      setOptimistic(current)
+    } finally {
+      setPending(null)
+    }
+  }
 
   return (
     <article className="card card-hover overflow-hidden">
@@ -42,9 +66,25 @@ export default function PostCard({ post }: { post: Post }) {
 
         <div className="mt-4 flex items-center justify-between">
           <div className="inline-flex items-center gap-1 rounded-full border border-neutral-200 dark:border-neutral-800">
-            <button className="px-3 py-1.5 hover:text-orange-700"><ArrowBigUp className="h-5 w-5" /></button>
-            <span className="px-2 text-sm min-w-[2ch] text-center">{post.stats?.votes ?? 0}</span>
-            <button className="px-3 py-1.5 hover:text-orange-700"><ArrowBigDown className="h-5 w-5" /></button>
+            <button
+              className="px-3 py-1.5 hover:text-orange-700 disabled:opacity-50"
+              aria-label="Upvote"
+              disabled={!!pending}
+              onClick={() => handleVote('up')}
+            >
+              <ArrowBigUp className="h-5 w-5" />
+            </button>
+            <span className="px-2 text-sm min-w-[2ch] text-center">
+              {optimistic ?? post.stats?.votes ?? 0}
+            </span>
+            <button
+              className="px-3 py-1.5 hover:text-orange-700 disabled:opacity-50"
+              aria-label="Downvote"
+              disabled={!!pending}
+              onClick={() => handleVote('down')}
+            >
+              <ArrowBigDown className="h-5 w-5" />
+            </button>
           </div>
           <a href="#comments" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-orange-700">
             <MessageSquareText className="h-4 w-4" />
