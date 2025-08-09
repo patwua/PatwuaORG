@@ -8,10 +8,9 @@ import { useAuth } from './context/AuthContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 
-function Header() {
+function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { user, logout } = useAuth()
   const [dark, setDark] = useState(false)
-  const [showAuth, setShowAuth] = useState(false)
   useEffect(() => {
     const root = document.documentElement
     const saved = localStorage.getItem('patwua-theme')
@@ -43,13 +42,12 @@ function Header() {
             </button>
           </>
         ) : (
-          <button onClick={() => setShowAuth(true)} className="ml-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-600 text-white hover:bg-orange-700">
+          <button onClick={onOpenAuth} className="ml-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-600 text-white hover:bg-orange-700">
             <PenSquare className="h-4 w-4" />
             <span className="hidden sm:inline">Sign in</span>
           </button>
         )}
       </div>
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </header>
   )
 }
@@ -59,6 +57,7 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showAuth, setShowAuth] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -88,7 +87,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
-      <Header />
+      <Header onOpenAuth={() => setShowAuth(true)} />
       <section className="bg-gradient-to-br from-orange-100 via-amber-50 to-white dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 border-b border-orange-100/70 dark:border-neutral-800">
         <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Where Every Voice Has a Place</h1>
@@ -155,6 +154,7 @@ export default function App() {
       </main>
 
       <BottomNav />
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
   )
 }

@@ -26,7 +26,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-black/40 overflow-y-auto">
       <div className="min-h-full flex items-center justify-center p-4">
         <div className="card w-full max-w-sm p-5 my-8">
           <h2 className="text-lg font-semibold mb-3">{mode === 'login' ? 'Sign in' : 'Create account'}</h2>
