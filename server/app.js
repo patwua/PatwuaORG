@@ -5,6 +5,7 @@ const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
 const setupWebSocket = require('./websocket');
 const authRoutes = require('./routes/auth');
+const personaRoutes = require('./routes/personas');
 
 const app = express();
 const allowed = process.env.ALLOWED_ORIGIN;
@@ -49,6 +50,7 @@ mongoose
 app.use('/api/posts', require('./routes/posts'));
 // expose auth endpoints
 app.use('/api/auth', authRoutes);
+app.use('/api/personas', personaRoutes);
 
 // Error handling
 app.use(errorHandler);

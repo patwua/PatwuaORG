@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Moon, SunMedium, PenSquare } from 'lucide-react'
 import Search from './components/Search'
+import PersonaSwitcher from './components/PersonaSwitcher'
 import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
 import AuthModal from './components/AuthModal'
@@ -31,6 +32,7 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
         <div className="font-semibold text-lg tracking-tight">Patwua</div>
         <div className="flex-1" />
         <Search />
+        <PersonaSwitcher />
         <button onClick={toggleTheme} className="ml-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Toggle theme">
           {dark ? <SunMedium className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
