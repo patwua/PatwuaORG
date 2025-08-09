@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import { Moon, SunMedium, PenSquare, ClipboardCheck } from 'lucide-react'
 import AdminReviewModal from './components/AdminReviewModal'
 import Search from './components/Search'
@@ -7,13 +8,16 @@ import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
 import AuthModal from './components/AuthModal'
 import PostEditor from './components/PostEditor'
+import ProfilePage from './pages/ProfilePage'
+import EditProfileModal from './components/EditProfileModal'
 import { useAuth } from './context/AuthContext'
 import { usePersona } from './context/PersonaContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 
-function Header({ onOpenAuth, onOpenEditor, onOpenReview }: { onOpenAuth: () => void; onOpenEditor: () => void; onOpenReview: () => void }) {
+function Header({ onOpenAuth, onOpenEditor, onOpenReview, onOpenEditProfile }: { onOpenAuth: () => void; onOpenEditor: () => void; onOpenReview: () => void; onOpenEditProfile: () => void }) {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [dark, setDark] = useState(false)
   useEffect(() => {
     const root = document.documentElement
@@ -32,7 +36,7 @@ function Header({ onOpenAuth, onOpenEditor, onOpenReview }: { onOpenAuth: () => 
   return (
     <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-neutral-900/70 border-b border-neutral-200/60 dark:border-neutral-800">
       <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3">
-        <div className="font-semibold text-lg tracking-tight">Patwua</div>
+        <div className="font-semibold text-lg tracking-tight"><Link to="/">Patwua</Link></div>
         <div className="flex-1" />
         <Search />
         <PersonaSwitcher />
@@ -41,7 +45,10 @@ function Header({ onOpenAuth, onOpenEditor, onOpenReview }: { onOpenAuth: () => 
         </button>
         {user ? (
           <>
-            <span className="text-sm hidden sm:inline">Hi, {user.name}</span>
+            <button onClick={() => navigate(`/u/${user?.slug ?? 'me'}`)} className="text-sm underline hidden sm:inline">Hi, {user.name}</button>
+            <button onClick={onOpenEditProfile} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
+              Edit Profile
+            </button>
             {user.role === 'admin' && (
               <button onClick={onOpenReview} className="ml-2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
                 <ClipboardCheck className="h-4 w-4" />
@@ -76,6 +83,7 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [showReview, setShowReview] = useState(false)
+  const [showEditProfile, setShowEditProfile] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -105,7 +113,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
-      <Header onOpenAuth={() => setShowAuth(true)} onOpenEditor={() => setShowEditor(true)} onOpenReview={() => setShowReview(true)} />
+      <Header onOpenAuth={() => setShowAuth(true)} onOpenEditor={() => setShowEditor(true)} onOpenReview={() => setShowReview(true)} onOpenEditProfile={() => setShowEditProfile(true)} />
       <section className="bg-gradient-to-br from-orange-100 via-amber-50 to-white dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 border-b border-orange-100/70 dark:border-neutral-800">
         <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Where Every Voice Has a Place</h1>
@@ -113,68 +121,77 @@ export default function App() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-6xl px-4 pt-4 pb-24 md:pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          <section className="md:col-span-2 space-y-4 md:space-y-6">
-            {loading && (
-              <div className="card p-6 animate-pulse">
-                <div className="h-5 w-40 bg-neutral-200 dark:bg-neutral-800 rounded mb-3" />
-                <div className="h-4 w-3/4 bg-neutral-200 dark:bg-neutral-800 rounded" />
-              </div>
-            )}
-            {error && (
-              <div className="card p-4 border-red-200 text-red-700">
-                <div className="font-semibold mb-1">Couldn’t load posts</div>
-                <div className="text-sm opacity-90">{error}</div>
-              </div>
-            )}
-            {!loading && !error && posts.length === 0 && (
-              <div className="card p-6 text-sm text-neutral-600 dark:text-neutral-300">
-                No posts yet. Be the first to start the conversation.
-              </div>
-            )}
-            {!loading && !error && posts.map(p => <PostCard key={p.id} post={p} onVote={onVote} />)}
-          </section>
-          <aside className="md:sticky md:top-20 md:h-[calc(100vh-6rem)] md:overflow-auto space-y-4 md:space-y-6">
-            <div className="card card-hover p-4 md:p-5">
-              <h3 className="font-semibold mb-3">Trending</h3>
-              <ul className="space-y-2">
-                {['Guyana', 'Energy', 'Culture'].map((t, i) => (
-                  <li key={i} className="flex items-center justify-between">
-                    <a href={`/tag/${t.toLowerCase()}`} className="text-sm hover:text-orange-700">#{t}</a>
-                    <span className="text-xs text-neutral-500">{(i+1)*42}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <main className="mx-auto max-w-6xl px-4 pt-4 pb-24 md:pb-12">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <section className="md:col-span-2 space-y-4 md:space-y-6">
+                  {loading && (
+                    <div className="card p-6 animate-pulse">
+                      <div className="h-5 w-40 bg-neutral-200 dark:bg-neutral-800 rounded mb-3" />
+                      <div className="h-4 w-3/4 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                    </div>
+                  )}
+                  {error && (
+                    <div className="card p-4 border-red-200 text-red-700">
+                      <div className="font-semibold mb-1">Couldn’t load posts</div>
+                      <div className="text-sm opacity-90">{error}</div>
+                    </div>
+                  )}
+                  {!loading && !error && posts.length === 0 && (
+                    <div className="card p-6 text-sm text-neutral-600 dark:text-neutral-300">
+                      No posts yet. Be the first to start the conversation.
+                    </div>
+                  )}
+                  {!loading && !error && posts.map(p => <PostCard key={p.id} post={p} onVote={onVote} />)}
+                </section>
+                <aside className="md:sticky md:top-20 md:h-[calc(100vh-6rem)] md:overflow-auto space-y-4 md:space-y-6">
+                  <div className="card card-hover p-4 md:p-5">
+                    <h3 className="font-semibold mb-3">Trending</h3>
+                    <ul className="space-y-2">
+                      {['Guyana', 'Energy', 'Culture'].map((t, i) => (
+                        <li key={i} className="flex items-center justify-between">
+                          <a href={`/tag/${t.toLowerCase()}`} className="text-sm hover:text-orange-700">#{t}</a>
+                          <span className="text-xs text-neutral-500">{(i+1)*42}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-            <div className="card card-hover p-4 md:p-5">
-              <h3 className="font-semibold mb-3">Latest comments</h3>
-              <ul className="space-y-3">
-                {['Aisha on Power', 'Devon on Policy', 'Maya on Roads'].map((t, i) => (
-                  <li key={i} className="text-sm text-neutral-700 dark:text-neutral-300">{t}</li>
-                ))}
-              </ul>
-            </div>
+                  <div className="card card-hover p-4 md:p-5">
+                    <h3 className="font-semibold mb-3">Latest comments</h3>
+                    <ul className="space-y-3">
+                      {['Aisha on Power', 'Devon on Policy', 'Maya on Roads'].map((t, i) => (
+                        <li key={i} className="text-sm text-neutral-700 dark:text-neutral-300">{t}</li>
+                      ))}
+                    </ul>
+                  </div>
 
-            <div className="card card-hover p-4 md:p-5">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-400 to-amber-500" />
-                <div>
-                  <div className="font-semibold">WaterNews</div>
-                  <div className="text-xs text-neutral-500">Verified Publisher</div>
-                </div>
+                  <div className="card card-hover p-4 md:p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-400 to-amber-500" />
+                      <div>
+                        <div className="font-semibold">WaterNews</div>
+                        <div className="text-xs text-neutral-500">Verified Publisher</div>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">Curating Guyana headlines for Patwua.</p>
+                  </div>
+                </aside>
               </div>
-              <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">Curating Guyana headlines for Patwua.</p>
-            </div>
-          </aside>
-        </div>
-      </main>
+            </main>
+          }
+        />
+        <Route path="/u/:slug" element={<ProfilePage />} />
+      </Routes>
 
       <BottomNav />
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       {showEditor && <PostEditor onClose={() => setShowEditor(false)} onCreated={() => { setShowEditor(false); /* optionally refresh list */ }} />}
       {showReview && <AdminReviewModal onClose={() => setShowReview(false)} />}
+      {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
     </div>
   )
 }

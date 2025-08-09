@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const personaRoutes = require('./routes/personas');
 const postsRoutes   = require('./routes/posts');
 const reviewRoutes = require('./routes/review');
+const usersRoutes  = require('./routes/users');
 
 const app = express();
 const allowed = process.env.ALLOWED_ORIGIN;
@@ -53,6 +54,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/personas', personaRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/review', reviewRoutes);
+app.use('/api/users', usersRoutes);
 
 // Error handling
 app.use(errorHandler);
