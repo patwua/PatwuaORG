@@ -10,12 +10,13 @@ import AuthModal from './components/AuthModal'
 import PostEditor from './components/PostEditor'
 import ProfilePage from './pages/ProfilePage'
 import EditProfileModal from './components/EditProfileModal'
+import AddPersonaModal from './components/AddPersonaModal'
 import { useAuth } from './context/AuthContext'
 import { usePersona } from './context/PersonaContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 
-function Header({ onOpenAuth, onOpenEditor, onOpenReview, onOpenEditProfile }: { onOpenAuth: () => void; onOpenEditor: () => void; onOpenReview: () => void; onOpenEditProfile: () => void }) {
+function Header({ onOpenAuth, onOpenEditor, onOpenReview, onOpenEditProfile, onOpenAddPersona }: { onOpenAuth: () => void; onOpenEditor: () => void; onOpenReview: () => void; onOpenEditProfile: () => void; onOpenAddPersona: () => void }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [dark, setDark] = useState(false)
@@ -46,6 +47,11 @@ function Header({ onOpenAuth, onOpenEditor, onOpenReview, onOpenEditProfile }: {
         {user ? (
           <>
             <button onClick={() => navigate(`/u/${user?.slug ?? 'me'}`)} className="text-sm underline hidden sm:inline">Hi, {user.name}</button>
+            {user.role === 'admin' && (
+              <button onClick={onOpenAddPersona} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                Add Persona
+              </button>
+            )}
             <button onClick={onOpenEditProfile} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
               Edit Profile
             </button>
@@ -84,6 +90,7 @@ export default function App() {
   const [showEditor, setShowEditor] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
+  const [showAddPersona, setShowAddPersona] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -113,7 +120,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
-      <Header onOpenAuth={() => setShowAuth(true)} onOpenEditor={() => setShowEditor(true)} onOpenReview={() => setShowReview(true)} onOpenEditProfile={() => setShowEditProfile(true)} />
+      <Header onOpenAuth={() => setShowAuth(true)} onOpenEditor={() => setShowEditor(true)} onOpenReview={() => setShowReview(true)} onOpenEditProfile={() => setShowEditProfile(true)} onOpenAddPersona={() => setShowAddPersona(true)} />
       <section className="bg-gradient-to-br from-orange-100 via-amber-50 to-white dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 border-b border-orange-100/70 dark:border-neutral-800">
         <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Where Every Voice Has a Place</h1>
@@ -191,6 +198,7 @@ export default function App() {
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       {showEditor && <PostEditor onClose={() => setShowEditor(false)} onCreated={() => { setShowEditor(false); /* optionally refresh list */ }} />}
       {showReview && <AdminReviewModal onClose={() => setShowReview(false)} />}
+      {showAddPersona && <AddPersonaModal onClose={() => setShowAddPersona(false)} />}
       {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
     </div>
   )
