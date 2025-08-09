@@ -45,7 +45,7 @@ describe('getPosts', () => {
 
     await getPosts()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/posts', { credentials: 'include' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/posts?status=published', { credentials: 'include' })
   })
 
   it('throws when response is not ok', async () => {
@@ -55,12 +55,17 @@ describe('getPosts', () => {
   })
 
   it('normalizes returned posts', async () => {
-    const data = [{ _id: '1', title: 'Hi', commentCount: 1, votes: 2 }]
+    const data = [{ _id: '1', title: 'Hi', stats: { comments: 1, votes: 2 } }]
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(data) } as any)
     globalThis.fetch = fetchMock as any
 
     const result = await getPosts()
-    expect(result[0]).toMatchObject({ id: '1', stats: { comments: 1, votes: 2 } })
+    expect(result[0]).toMatchObject({
+      id: '1',
+      tags: [],
+      author: { name: 'Unknown', verified: false },
+      stats: { comments: 1, votes: 2 },
+    })
   })
 
   it('supports items array shape', async () => {
