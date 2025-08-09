@@ -7,6 +7,7 @@ const setupWebSocket = require('./websocket');
 const authRoutes = require('./routes/auth');
 const personaRoutes = require('./routes/personas');
 const postsRoutes   = require('./routes/posts');
+const reviewRoutes = require('./routes/review');
 
 const app = express();
 const allowed = process.env.ALLOWED_ORIGIN;
@@ -51,6 +52,7 @@ mongoose
 app.use('/api/auth', authRoutes);
 app.use('/api/personas', personaRoutes);
 app.use('/api/posts', postsRoutes);
+app.use('/api/review', reviewRoutes);
 
 // Error handling
 app.use(errorHandler);
