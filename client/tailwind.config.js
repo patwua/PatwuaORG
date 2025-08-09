@@ -1,19 +1,27 @@
 /** @type {import('tailwindcss').Config} */
-export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+module.exports = {
+  darkMode: 'class',
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+  ],
   theme: {
     extend: {
       colors: {
-        primary: '#4361ee',
-        'primary-dark': '#3a56d4',
-        'primary-light': '#edf2fe',
-        text: '#2b2d42',
-        'text-light': '#8d99ae',
-        bg: '#f8f9fa',
-        card: '#ffffff',
-        border: '#e9ecef',
+        brand: {
+          DEFAULT: 'rgb(var(--brand-primary))',
+          '600': 'rgb(var(--brand-primary-600))',
+          '700': 'rgb(var(--brand-primary-700))',
+          ink: 'rgb(var(--brand-ink))'
+        }
       },
-    },
+      boxShadow: {
+        card: '0 1px 2px 0 rgba(0,0,0,0.05), 0 6px 12px -4px rgba(0,0,0,0.06)'
+      },
+      borderRadius: {
+        '2xl': '1rem'
+      }
+    }
   },
-  plugins: [],
+  plugins: []
 }
