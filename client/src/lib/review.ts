@@ -25,11 +25,12 @@ export async function approvePost(id: string): Promise<Post> {
   return handle(r)
 }
 
-export async function rejectPost(id: string): Promise<Post> {
+export async function rejectPost(id: string, note: string): Promise<Post> {
   const r = await fetch(`${API}/api/review/posts/${id}/reject`, {
     method: 'PATCH',
     credentials: 'include',
     headers: headers(),
+    body: JSON.stringify({ note }),
   })
   return handle(r)
 }
