@@ -1,9 +1,31 @@
 services:
+  # --- API (Express) ---
   - type: web
-    name: patwua
-    runtime: node
-    buildCommand: cd client && npm run render-build
-    startCommand: cd client && npm run start
+    name: patwua-api
     env: node
-    staticPublishPath: "./client/build"
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: node app.js
+    autoDeploy: true
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: "8080"
+      - key: ALLOWED_ORIGIN
+        # Set this later to your client URL like: https://patwua-client.onrender.com
+        value: "*"
 
+  # --- Client (Vite static site) ---
+  - type: static
+    name: patwua-client
+    rootDir: client
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    # SPA fallback so client-side routes work:
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
