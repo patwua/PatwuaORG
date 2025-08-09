@@ -8,25 +8,33 @@ const authRoutes = require('./routes/auth');
 
 const app = express();
 
-// CORS: allow the deployed client (fallback to * for early boot)
-const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
-app.use(
-  cors({
-    origin: (origin, cb) => cb(null, allowedOrigin === '*' ? true : origin === allowedOrigin),
-    credentials: true,
-  })
+const allowedOrigins = new Set(
+  [
+    process.env.ALLOWED_ORIGIN,
+    ...(process.env.EXTRA_ALLOWED_ORIGINS?.split(',') || []),
+  ].filter(Boolean)
 );
 
-// Parse JSON bodies
+const corsOptions = {
+  origin(origin, cb) {
+    if (!origin) return cb(null, true); // allow non-browser tools
+    return cb(null, allowedOrigins.has(origin)); // allow only known origins
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // handle preflight
 app.use(express.json());
+
+app.get('/healthz', (_req, res) => res.send('ok'));
 
 // Root route for basic health check
 app.get('/', (req, res) => {
   res.send('Patwua API is running');
 });
-
-// HEALTHCHECK (optional but useful for Render)
-app.get('/healthz', (_req, res) => res.status(200).send('ok'));
 
 // MongoDB Connection
 const mongoURI =
