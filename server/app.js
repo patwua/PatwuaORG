@@ -7,18 +7,12 @@ const setupWebSocket = require('./websocket');
 const authRoutes = require('./routes/auth');
 
 const app = express();
-
-const allowedOrigins = new Set(
-  [
-    process.env.ALLOWED_ORIGIN,
-    ...(process.env.EXTRA_ALLOWED_ORIGINS?.split(',') || []),
-  ].filter(Boolean)
-);
+const allowed = process.env.ALLOWED_ORIGIN;
 
 const corsOptions = {
   origin(origin, cb) {
-    if (!origin) return cb(null, true); // allow non-browser tools
-    return cb(null, allowedOrigins.has(origin)); // allow only known origins
+    if (!origin) return cb(null, true); // allow server-to-server / curl
+    cb(null, origin === allowed); // exact match only
   },
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -26,7 +20,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // handle preflight
+app.options('*', cors(corsOptions)); // preflight
 app.use(express.json());
 
 app.get('/healthz', (_req, res) => res.send('ok'));
