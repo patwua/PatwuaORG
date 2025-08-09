@@ -2,6 +2,11 @@ import type { Post } from '../types/post'
 
 const API = import.meta.env.VITE_API_BASE || ''
 
+function authHeaders() {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 // Normalize server payloads into our Post shape
 export function normalizePost(p: any): Post {
   return {
@@ -41,7 +46,7 @@ export async function votePost(id: string, dir: 'up' | 'down'): Promise<{ votes:
   const res = await fetch(`${API}/api/posts/${id}/vote`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ dir }),
   })
   return handle(res)
