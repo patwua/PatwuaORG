@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Moon, SunMedium, PenSquare, Home, Tag, Bell, PencilLine, CheckCheck, ArrowBigUp, ArrowBigDown, MessageSquareText, Bookmark, Share2 } from 'lucide-react'
+import Search from './components/Search'
 
 type Post = {
   id: string
@@ -33,6 +34,7 @@ function Header() {
       <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3">
         <div className="font-semibold text-lg tracking-tight">Patwua</div>
         <div className="flex-1" />
+        <Search />
         <button onClick={toggleTheme} className="ml-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Toggle theme">
           {dark ? <SunMedium className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
