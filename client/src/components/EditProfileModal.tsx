@@ -1,11 +1,28 @@
 import { useEffect, useState } from 'react'
 import { getMyProfile, updateMyProfile } from '../lib/users'
+import { uploadImage, avatarUrl } from '../lib/upload'
 
 export default function EditProfileModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({ name:'', avatar:'', bio:'', location:'', categories:'', slug:'' })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+
+  async function onPickAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadImage(file)
+      setForm(f => ({ ...f, avatar: url }))
+    } catch (err: any) {
+      setError(err?.message || 'Upload failed')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -59,6 +76,17 @@ export default function EditProfileModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
+
+          {/* avatar preview + picker */}
+          <div className="mb-2 flex items-center gap-3">
+            <div className="h-14 w-14 rounded-full overflow-hidden bg-neutral-200">
+              {form.avatar ? <img src={avatarUrl(form.avatar)} alt="avatar" className="h-full w-full object-cover" /> : null}
+            </div>
+            <label className="text-sm inline-flex items-center gap-2 cursor-pointer">
+              <input type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
+              <span className="px-3 py-1.5 rounded-md border">{uploading ? 'Uploading…' : 'Upload avatar'}</span>
+            </label>
+          </div>
 
           <div className="space-y-3">
             <input className="w-full h-10 rounded-md border px-3 bg-white dark:bg-neutral-900" placeholder="Name" value={form.name} onChange={e => setForm(f => ({...f, name:e.target.value}))} />

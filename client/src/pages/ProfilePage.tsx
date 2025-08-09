@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getPublicProfile, getUserPersonas } from '../lib/users'
 import type { Persona } from '../types/persona'
+import { avatarUrl } from '../lib/upload'
 
 type PublicUser = { id:string; slug:string; name:string; avatar?:string; bio?:string; location?:string; categories?:string[]; verified?:boolean }
 
@@ -38,7 +39,7 @@ export default function ProfilePage() {
       <div className="card p-5">
         <div className="flex items-start gap-4">
           <div className="h-16 w-16 rounded-full bg-neutral-200 overflow-hidden">
-            {user.avatar ? <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" /> : null}
+            {user.avatar ? <img src={avatarUrl(user.avatar)} alt={user.name} className="h-full w-full object-cover" /> : null}
           </div>
           <div className="flex-1">
             <div className="text-xl font-semibold">{user.name}</div>
