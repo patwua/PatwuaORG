@@ -2,7 +2,7 @@ const express = require('express')
 const Post = require('../models/Post')
 const Persona = require('../models/Persona')
 const User = require('../models/User')
-const { authRequired } = require('../middleware/auth')
+const auth = require('../middleware/auth')
 const { shortSlug } = require('../utils/slug')
 const { extractTags } = require('../utils/tagAI')
 
@@ -61,7 +61,7 @@ router.get('/:id', async (req, res) => {
 })
 
 // POST /api/posts  (create draft or submit/publish depending on role + action)
-router.post('/', authRequired, async (req, res) => {
+router.post('/', auth(), async (req, res) => {
   try {
     const { title, body, personaId, action } = req.body || {}
     if (!title || title.trim().length < 3) return res.status(400).json({ error: 'Title too short' })
@@ -108,7 +108,7 @@ router.post('/', authRequired, async (req, res) => {
 })
 
 // PATCH /api/posts/:id  (update title/body/tags while draft or pending)
-router.patch('/:id', authRequired, async (req, res) => {
+router.patch('/:id', auth(), async (req, res) => {
   try {
     const { id } = req.params
     const { title, body, tags } = req.body || {}
@@ -150,7 +150,7 @@ router.patch('/:id', authRequired, async (req, res) => {
 })
 
 // PATCH /api/posts/:id/submit  (author -> pending_review)
-router.patch('/:id/submit', authRequired, async (req, res) => {
+router.patch('/:id/submit', auth(), async (req, res) => {
   try {
     const { id } = req.params
     const post = await Post.findById(id)
@@ -167,7 +167,7 @@ router.patch('/:id/submit', authRequired, async (req, res) => {
 })
 
 // PATCH /api/posts/:id/publish  (admin only)
-router.patch('/:id/publish', authRequired, async (req, res) => {
+router.patch('/:id/publish', auth(), async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
     const { id } = req.params

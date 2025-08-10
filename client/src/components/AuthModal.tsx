@@ -1,5 +1,5 @@
 import { GoogleLogin } from '@react-oauth/google'
-import jwt_decode from 'jwt-decode'
+import { jwtDecode } from 'jwt-decode'
 import { googleLogin } from '@/lib/auth'
 import { useAuth } from '@/context/AuthContext'
 
@@ -13,7 +13,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
       const credential = credResp?.credential as string
       if (!credential) return
       // optional local decode for UX, server still verifies
-      jwt_decode<GoogleJwt>(credential)
+      jwtDecode<GoogleJwt>(credential)
       const user = await googleLogin(credential)
       setUser(user)
       onClose()
