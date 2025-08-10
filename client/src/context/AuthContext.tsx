@@ -1,66 +1,24 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useMemo, useState } from 'react'
 import type { User } from '../types/auth'
-import { clearToken, getToken, login as apiLogin, register as apiRegister, saveToken } from '../lib/auth'
+import { logout as apiLogout } from '@/lib/auth'
 
 type AuthState = {
   user: User | null
-  loading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
-  logout: () => void
+  setUser: (u: User | null) => void
+  logout: () => Promise<void>
 }
 
 const Ctx = createContext<AuthState | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Restore from JWT in localStorage
-    ;(async () => {
-      const token = getToken()
-      if (!token) {
-        setLoading(false)
-        return
-      }
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        if (payload?.email) {
-          setUser({ id: payload.id, email: payload.email, name: payload.name, role: payload.role, slug: payload.slug })
-        }
-        const res = await fetch((import.meta.env.VITE_API_BASE || '') + '/api/auth/me', {
-          credentials: 'include',
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (res.ok) {
-          const me = await res.json()
-          setUser(me) // includes slug now
-        }
-      } catch {
-        // ignore
-      }
-      setLoading(false)
-    })()
-  }, [])
-
-  async function login(email: string, password: string) {
-    const { token, user } = await apiLogin(email, password)
-    saveToken(token)
-    setUser(user)
-  }
-
-  async function register(name: string, email: string, password: string) {
-    await apiRegister(name, email, password)
-    await login(email, password)
-  }
-
-  function logout() {
-    clearToken()
+  async function logout() {
+    await apiLogout()
     setUser(null)
   }
 
-  const value = useMemo(() => ({ user, loading, login, register, logout }), [user, loading])
+  const value = useMemo(() => ({ user, setUser, logout }), [user])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
@@ -69,4 +27,3 @@ export function useAuth() {
   if (!v) throw new Error('useAuth must be used within AuthProvider')
   return v
 }
-

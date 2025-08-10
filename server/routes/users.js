@@ -1,7 +1,8 @@
 const express = require('express')
 const User = require('../models/User')
 const Persona = require('../models/Persona')
-const { authRequired } = require('../middleware/auth')
+const auth = require('../middleware/auth')
+const adminOnly = require('../middleware/adminOnly')
 
 const router = express.Router()
 
@@ -10,8 +11,8 @@ router.get('/:slug', async (req, res) => {
   const u = await User.findOne({ slug: req.params.slug }).lean()
   if (!u) return res.status(404).json({ error: 'User not found' })
   // expose public fields only
-  const { _id, name, avatar, bio, location, categories, verified, createdAt } = u
-  res.json({ id: _id, slug: req.params.slug, name, avatar, bio, location, categories, verified, createdAt })
+  const { _id, name, image, bio, location, categories, verified, createdAt } = u
+  res.json({ id: _id, slug: req.params.slug, name, image, bio, location, categories, verified, createdAt })
 })
 
 // Public: list personas owned by this user
@@ -23,7 +24,7 @@ router.get('/:slug/personas', async (req, res) => {
 })
 
 // Self profile
-router.get('/me/profile', authRequired, async (req, res) => {
+router.get('/me/profile', auth(), async (req, res) => {
   let u = await User.findById(req.user.id)
   if (!u) return res.status(404).json({ error: 'User not found' })
   if (!u.slug) {
@@ -41,16 +42,16 @@ router.get('/me/profile', authRequired, async (req, res) => {
     u.slug = slug
     await u.save()
   }
-  const { _id, email, name, avatar, bio, location, categories, role, slug, verified } = u.toObject()
-  res.json({ id: _id, email, name, avatar, bio, location, categories, role, slug, verified })
+  const { _id, email, name, image, bio, location, categories, role, slug, verified } = u.toObject()
+  res.json({ id: _id, email, name, image, bio, location, categories, role, slug, verified })
 })
 
 // Update self
-router.patch('/me/profile', authRequired, async (req, res) => {
-  const { name, avatar, bio, location, categories, slug } = req.body || {}
+router.patch('/me/profile', auth(), async (req, res) => {
+  const { name, image, bio, location, categories, slug } = req.body || {}
   const allowed = {}
   if (name !== undefined) allowed.name = name
-  if (avatar !== undefined) allowed.avatar = avatar
+  if (image !== undefined) allowed.image = image
   if (bio !== undefined) allowed.bio = bio
   if (location !== undefined) allowed.location = location
   if (categories !== undefined) allowed.categories = categories
@@ -65,6 +66,44 @@ router.patch('/me/profile', authRequired, async (req, res) => {
   } catch (e) {
     // likely duplicate slug
     return res.status(400).json({ error: 'Failed to update profile (slug may be taken)' })
+  }
+})
+
+// List users (admin)
+router.get('/admin', auth(true), adminOnly, async (req, res, next) => {
+  try {
+    const users = await User.find({}, 'name email role createdAt').sort({ createdAt: -1 }).lean()
+    res.json({ users })
+  } catch (e) {
+    next(e)
+  }
+})
+
+// Update role (admin)
+router.patch('/admin/:id/role', auth(true), adminOnly, async (req, res, next) => {
+  try {
+    const { role } = req.body || {}
+    const allowed = [
+      'user',
+      'moderator',
+      'verified_influencer',
+      'verified_publisher',
+      'advertiser',
+      'admin',
+      'system_admin',
+    ]
+    if (!allowed.includes(role)) return res.status(400).json({ error: 'Invalid role' })
+
+    const updated = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true, runValidators: true }
+    )
+    if (!updated) return res.status(404).json({ error: 'User not found' })
+
+    res.json({ user: { _id: updated._id, email: updated.email, role: updated.role } })
+  } catch (e) {
+    next(e)
   }
 })
 
