@@ -7,6 +7,7 @@ const setupWebSocket = require('./websocket');
 const authRoutes = require('./routes/auth');
 const personaRoutes = require('./routes/personas');
 const postsRoutes   = require('./routes/posts');
+const tagsRoutes    = require('./routes/tags');
 const reviewRoutes = require('./routes/review');
 const usersRoutes  = require('./routes/users');
 
@@ -53,6 +54,7 @@ mongoose
 app.use('/api/auth', authRoutes);
 app.use('/api/personas', personaRoutes);
 app.use('/api/posts', postsRoutes);
+app.use('/api/tags', tagsRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/users', usersRoutes);
 

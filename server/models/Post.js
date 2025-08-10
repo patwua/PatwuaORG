@@ -4,7 +4,7 @@ const PostSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     body:  { type: String, required: true },
-    tags:  { type: [String], default: [] },
+    tags:  { type: [String], default: [], index: true },
 
     // attribution
     personaId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Persona', required: true },
@@ -30,5 +30,7 @@ const PostSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
+
+PostSchema.index({ createdAt: -1 })
 
 module.exports = mongoose.model('Post', PostSchema)
