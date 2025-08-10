@@ -7,6 +7,15 @@ const PostSchema = new mongoose.Schema({
   body: { type: String, required: true }, // plain text or editor text
   bodyHtml: { type: String },             // sanitized HTML (for html/mjml posts)
   format: { type: String, enum: ['richtext','html','mjml'], default: 'richtext' },
+  coverImage: { type: String },
+  media: [{
+    kind: { type: String, enum: ['image','video'] },
+    url: String,
+    alt: String,
+    width: Number,
+    height: Number,
+    poster: String,
+  }],
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   type: { type: String, enum: ['news','vip','post','ads'], default: 'post' },
   status: { type: String, enum: ['active','archived'], default: 'active' },

@@ -2,7 +2,7 @@ const express = require('express');
 const Post = require('../models/Post');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
-const { sanitize, compileMjml, stripToText } = require('../utils/html');
+const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
 
 const router = express.Router();
 
@@ -22,43 +22,54 @@ router.get('/', async (req, res, next) => {
  */
 router.post('/', auth(true), async (req, res, next) => {
   try {
-    const { title, body, html, mjml, tags = [], format } = req.body || {};
+    // Accept one of: body (richtext), html, mjml … or just a single payload `content` and we detect.
+    const { title, body, html, mjml, content, tags = [], format } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
 
-    const postType = Post.resolveTypeForRole(req.user.role);
+    const roleType = Post.resolveTypeForRole(req.user.role);
+
+    // Decide format/payload automatically when `format` is missing:
+    const raw = content || html || mjml || body || '';
+    const fmt = format || detectFormat(raw);
+
     let bodyText = body || '';
     let bodyHtml;
-    const fmt = format || 'richtext';
 
-    if (fmt === 'html' && html) {
-      bodyHtml = sanitize(html);
-      if (!bodyText) bodyText = stripToText(bodyHtml).slice(0, 600);
-    } else if (fmt === 'mjml' && mjml) {
-      const compiled = compileMjml(mjml);
+    if (fmt === 'mjml') {
+      const compiled = compileMjml(content || mjml || raw);
       bodyHtml = sanitize(compiled);
-      if (!bodyText) bodyText = stripToText(bodyHtml).slice(0, 600);
-    } else {
-      // richtext fallback: ensure body exists
+      if (!bodyText) bodyText = stripToText(bodyHtml).slice(0, 800);
+    } else if (fmt === 'html') {
+      bodyHtml = sanitize(content || html || raw);
+      if (!bodyText) bodyText = stripToText(bodyHtml).slice(0, 800);
+    } else { // richtext
       if (!bodyText) return res.status(400).json({ error: 'Body required for richtext' });
     }
 
+    // Extract media + cover
+    let coverImage = null, media = [];
+    if (bodyHtml) {
+      const m = extractMedia(bodyHtml);
+      coverImage = chooseCover(m);
+      media = [
+        ...m.images.map(i => ({ kind: 'image', url: i.url, alt: i.alt, width: i.width, height: i.height })),
+        ...m.videos.map(v => ({ kind: 'video', url: v.url, poster: v.poster }))
+      ];
+    }
+
     const doc = await Post.create({
-      title,
-      body: bodyText,
-      bodyHtml,
-      format: fmt,
-      author: req.user.id,
-      type: postType,
-      tags
+      title, body: bodyText, bodyHtml, format: fmt,
+      author: req.user.id, type: roleType, tags, coverImage, media
     });
 
+    // async tag AI (non-blocking)
     setImmediate(async () => {
       try {
         const suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml });
         if (Array.isArray(suggestions) && suggestions.length) {
           await Post.findByIdAndUpdate(doc._id, { $addToSet: { tags: { $each: suggestions } } });
         }
-      } catch (_) {}
+      } catch {}
     });
 
     res.status(201).json({ post: doc });

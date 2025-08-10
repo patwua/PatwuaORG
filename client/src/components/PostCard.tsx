@@ -43,6 +43,11 @@ export default function PostCard({
 
   return (
     <article className="card card-hover overflow-hidden">
+      {post.coverImage && (
+        <div className="aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
+          <img src={post.coverImage} alt="" className="h-full w-full object-cover" loading="lazy" />
+        </div>
+      )}
       <div className="p-4 md:p-5">
         <div className="flex items-center gap-3 mb-3">
           <div className="h-9 w-9 rounded-full bg-neutral-200" />

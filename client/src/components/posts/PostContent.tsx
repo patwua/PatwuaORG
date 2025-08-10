@@ -1,22 +1,18 @@
 import type { Post } from '@/types/post';
 
 export default function PostContent({ post }: { post: Post }) {
-  if (post?.bodyHtml) {
-    return (
-      <div className="p-4">
-        <div
-          className="prose max-w-none post-html"
-          // bodyHtml is already sanitized server-side
-          dangerouslySetInnerHTML={{ __html: post.bodyHtml }}
-        />
-      </div>
-    );
-  }
   return (
     <div className="p-4">
-      <p className="whitespace-pre-line text-gray-800 dark:text-gray-200">
-        {post.body}
-      </p>
+      {post.coverImage && (
+        <figure className="mb-4">
+          <img src={post.coverImage} alt="" className="w-full h-auto rounded-lg" />
+        </figure>
+      )}
+      {post.bodyHtml ? (
+        <div className="prose max-w-none post-html" dangerouslySetInnerHTML={{ __html: post.bodyHtml }} />
+      ) : (
+        <div className="prose max-w-none">{post.body}</div>
+      )}
     </div>
   );
 }
