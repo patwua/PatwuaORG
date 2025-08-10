@@ -16,53 +16,90 @@ router.get('/', async (req, res, next) => {
 });
 
 /**
- * Create post (richtext/html/mjml)
- * - type enforced by user.role (ignores client-provided type)
- * - triggers async tag AI (non-blocking)
+ * PREVIEW — compile MJML, sanitize HTML, extract media, suggest cover.
+ * Body: { content: string }
+ * Returns: { format, html, media: {images[], videos[]}, coverSuggested }
+ */
+router.post('/preview', auth(true), async (req, res, next) => {
+  try {
+    const { content = '' } = req.body || {};
+    const fmt = detectFormat(content);
+
+    let bodyHtml = '';
+    if (fmt === 'mjml') {
+      const compiled = compileMjml(content);
+      bodyHtml = sanitize(compiled);
+    } else if (fmt === 'html') {
+      bodyHtml = sanitize(content);
+    } else {
+      return res.status(400).json({ error: 'Provide HTML or MJML for preview' });
+    }
+
+    const m = extractMedia(bodyHtml);
+    const coverSuggested = chooseCover(m);
+
+    res.json({
+      format: fmt,
+      html: bodyHtml,
+      media: m,
+      coverSuggested,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * CREATE — single content field; auto-detect format; optional coverImage override
+ * Body: { title, content, tags?, coverImage? }
  */
 router.post('/', auth(true), async (req, res, next) => {
   try {
-    // Accept one of: body (richtext), html, mjml … or just a single payload `content` and we detect.
-    const { title, body, html, mjml, content, tags = [], format } = req.body || {};
+    const { title, content = '', tags = [], coverImage } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
 
+    const fmt = detectFormat(content);
     const roleType = Post.resolveTypeForRole(req.user.role);
 
-    // Decide format/payload automatically when `format` is missing:
-    const raw = content || html || mjml || body || '';
-    const fmt = format || detectFormat(raw);
-
-    let bodyText = body || '';
+    let bodyText = '';
     let bodyHtml;
 
     if (fmt === 'mjml') {
-      const compiled = compileMjml(content || mjml || raw);
+      const compiled = compileMjml(content);
       bodyHtml = sanitize(compiled);
-      if (!bodyText) bodyText = stripToText(bodyHtml).slice(0, 800);
+      bodyText = stripToText(bodyHtml).slice(0, 800);
     } else if (fmt === 'html') {
-      bodyHtml = sanitize(content || html || raw);
-      if (!bodyText) bodyText = stripToText(bodyHtml).slice(0, 800);
-    } else { // richtext
-      if (!bodyText) return res.status(400).json({ error: 'Body required for richtext' });
+      bodyHtml = sanitize(content);
+      bodyText = stripToText(bodyHtml).slice(0, 800);
+    } else {
+      return res.status(400).json({ error: 'Content must be HTML or MJML' });
     }
 
-    // Extract media + cover
-    let coverImage = null, media = [];
+    // Extract media & choose cover unless overridden
+    let cover = coverImage || null;
+    let media = [];
     if (bodyHtml) {
       const m = extractMedia(bodyHtml);
-      coverImage = chooseCover(m);
       media = [
         ...m.images.map(i => ({ kind: 'image', url: i.url, alt: i.alt, width: i.width, height: i.height })),
-        ...m.videos.map(v => ({ kind: 'video', url: v.url, poster: v.poster }))
+        ...m.videos.map(v => ({ kind: 'video', url: v.url, poster: v.poster })),
       ];
+      if (!cover) cover = chooseCover(m);
     }
 
     const doc = await Post.create({
-      title, body: bodyText, bodyHtml, format: fmt,
-      author: req.user.id, type: roleType, tags, coverImage, media
+      title,
+      body: bodyText,
+      bodyHtml,
+      format: fmt,
+      author: req.user.id,
+      type: roleType,
+      tags,
+      coverImage: cover || undefined,
+      media,
     });
 
-    // async tag AI (non-blocking)
+    // async tag AI
     setImmediate(async () => {
       try {
         const suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml });
@@ -73,7 +110,9 @@ router.post('/', auth(true), async (req, res, next) => {
     });
 
     res.status(201).json({ post: doc });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
 /**
