@@ -9,6 +9,7 @@ import PostCard from './components/PostCard'
 import AuthModal from './components/AuthModal'
 import PostEditor from './components/PostEditor'
 import ProfilePage from './pages/ProfilePage'
+import PostDetailPage from './pages/PostDetailPage'
 import EditProfileModal from './components/EditProfileModal'
 import AddPersonaModal from './components/AddPersonaModal'
 import { useAuth } from './context/AuthContext'
@@ -191,6 +192,7 @@ export default function App() {
             </main>
           }
         />
+        <Route path="/post/:id" element={<PostDetailPage />} />
         <Route path="/u/:slug" element={<ProfilePage />} />
       </Routes>
 

@@ -1,6 +1,7 @@
 const express = require('express')
 const Post = require('../models/Post')
 const Persona = require('../models/Persona')
+const User = require('../models/User')
 const { authRequired } = require('../middleware/auth')
 
 const router = express.Router()
@@ -17,6 +18,26 @@ router.get('/', async (req, res) => {
     res.json(items)
   } catch {
     res.status(500).json({ error: 'Failed to list posts' })
+  }
+})
+
+// GET /api/posts/:id  (public)
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const post = await Post.findById(id).lean()
+    if (!post || post.status !== 'published') return res.status(404).json({ error: 'Not found' })
+    const [persona, author] = await Promise.all([
+      Persona.findById(post.personaId).lean(),
+      User.findById(post.authorUserId).lean()
+    ])
+    res.json({
+      ...post,
+      persona: persona ? { _id: persona._id, name: persona.name, avatar: persona.avatar } : null,
+      author: author ? { _id: author._id, name: author.name, slug: author.slug } : null,
+    })
+  } catch {
+    res.status(500).json({ error: 'Failed to load post' })
   }
 })
 
