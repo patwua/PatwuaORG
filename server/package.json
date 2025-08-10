@@ -14,5 +14,13 @@
     "mongoose": "^7.0.0",
     "slugify": "^1.6.6",
     "ws": "^8.17.0"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^8.14.0",
+    "supertest": "^6.3.3"
   }
 }

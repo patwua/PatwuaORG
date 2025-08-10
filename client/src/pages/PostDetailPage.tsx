@@ -1,24 +1,27 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getPostBySlug } from '../lib/api'
+import { fetchPostBySlug, unarchivePost } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
 import type { Post } from '../types/post'
+import ArchiveModal from '../components/ArchiveModal'
 
 export default function PostDetailPage() {
   const { slug = '' } = useParams()
-  const type = window.location.pathname.split('/')[1] || 'posts'
   const [post, setPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showArchive, setShowArchive] = useState(false)
+  const { user } = useAuth()
 
   useEffect(() => {
     let alive = true
     ;(async () => {
       try {
         setLoading(true)
-        const data = await getPostBySlug(type, slug)
+        const { data } = await fetchPostBySlug(slug)
         if (!alive) return
-        setPost(data)
-        document.title = `${data.title} • Patwua`
+        setPost(data.post)
+        document.title = `${data.post.title} • Patwua`
       } catch (e: any) {
         setError(e?.message || 'Post not found')
       } finally {
@@ -26,13 +29,24 @@ export default function PostDetailPage() {
       }
     })()
     return () => { alive = false }
-  }, [type, slug])
+  }, [slug])
 
   if (loading) return <div className="mx-auto max-w-3xl p-4">Loading…</div>
   if (error || !post) return <div className="mx-auto max-w-3xl p-4 text-red-600">Post not found.</div>
 
   const created = post.createdAt ? new Date(post.createdAt) : null
   const idOr = (post as any)._id || post.id
+  const canArchive = ['moderator','admin','system_admin'].includes(user?.role || '') && post.status !== 'archived'
+  const canUnarchive = post.status === 'archived' && (user?.role === 'system_admin' || [post.author?._id, post.author?.id].includes(user?.id))
+
+  async function handleUnarchive() {
+    try {
+      const { data } = await unarchivePost(idOr as string)
+      setPost(data.post)
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Failed to unarchive')
+    }
+  }
 
   return (
     <article className="mx-auto max-w-3xl p-4 space-y-5">
@@ -75,8 +89,23 @@ export default function PostDetailPage() {
       {/* Footer actions (placeholder) */}
       <footer className="flex items-center justify-between pt-4 border-t">
         <Link to="/" className="underline">← Back to feed</Link>
-        <div className="text-sm text-neutral-500">Post ID: {idOr}</div>
+        <div className="flex items-center gap-2">
+          {canArchive && (
+            <button onClick={() => setShowArchive(true)} className="text-sm underline">Archive</button>
+          )}
+          {canUnarchive && (
+            <button onClick={handleUnarchive} className="text-sm underline">Unarchive</button>
+          )}
+          <div className="text-sm text-neutral-500">Post ID: {idOr}</div>
+        </div>
       </footer>
+      {showArchive && (
+        <ArchiveModal
+          postId={idOr as string}
+          onClose={() => setShowArchive(false)}
+          onArchived={(p) => { setPost(p); setShowArchive(false); }}
+        />
+      )}
     </article>
   )
 }

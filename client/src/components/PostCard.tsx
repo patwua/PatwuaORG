@@ -51,7 +51,17 @@ export default function PostCard({
               <span>{post.author?.name ?? 'Unknown'}</span>
               {post.author?.verified && <CheckCheck className="h-4 w-4 text-emerald-500" />}
             </div>
-            <div className="text-xs text-neutral-500"><time dateTime={post.createdAt ?? ''}>{relative}</time></div>
+            <div className="text-xs text-neutral-500 flex items-center gap-1">
+              <time dateTime={post.createdAt ?? ''}>{relative}</time>
+              {post.summaryAI && (
+                <span className="px-1.5 py-0.5 rounded-full bg-neutral-200 text-[10px] text-neutral-700">AI</span>
+              )}
+              {post.type && post.type !== 'post' && (
+                <span className="px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px]">
+                  {post.type === 'news' ? 'Publisher' : post.type === 'vip' ? 'VIP' : 'Ad'}
+                </span>
+              )}
+            </div>
           </div>
           <div className="ml-auto inline-flex gap-1 text-neutral-500">
             <button className="p-2 hover:text-orange-700" aria-label="save"><Bookmark className="h-5 w-5" /></button>
@@ -60,12 +70,14 @@ export default function PostCard({
         </div>
 
         <a
-          href={post.path || `/post/${(post as any)._id || post.id}`}
+          href={post.slug ? `/p/${post.slug}` : '#'}
           className="text-lg md:text-xl font-semibold tracking-tight mb-2 hover:underline"
         >
           {post.title}
         </a>
-        {post.excerpt && <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">AI · {post.excerpt}</p>}
+        {(post.summaryAI || post.excerpt) && (
+          <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">{post.summaryAI || post.excerpt}</p>
+        )}
 
         <TagChips tags={post.tags} />
 

@@ -1,36 +1,37 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const { shortSlug } = require('../utils/slug');
 
-const PostSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true, trim: true },
-    body:  { type: String, required: true },
-    tags:  { type: [String], default: [], index: true },
+const PostSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  slug: { type: String, index: true, unique: true, sparse: true },
+  body: { type: String, required: true },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  type: { type: String, enum: ['news','vip','post','ads'], default: 'post' },
+  status: { type: String, enum: ['active','archived'], default: 'active' },
+  archivedReason: { type: String },
+  archivedAt: { type: Date },
+  archivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  tags: [{ type: String, index: true }],
+  summaryAI: { type: String },
+}, { timestamps: true });
 
-    // attribution
-    personaId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Persona', required: true },
-    authorUserId:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+// ensure stable slug on first save only
+PostSchema.pre('save', function(next) {
+  if (!this.isModified('title') && this.slug) return next();
+  if (!this.slug) {
+    const base = shortSlug(this.title || '');
+    const rand = Math.random().toString(36).slice(2, 6);
+    this.slug = `${base}-${rand}`; // reduce collision risk
+  }
+  next();
+});
 
-    // workflow
-    status: { type: String, enum: ['draft', 'pending_review', 'published'], default: 'draft', index: true },
+// helper to map user.role -> post.type on create
+PostSchema.statics.resolveTypeForRole = function(role) {
+  if (role === 'verified_publisher') return 'news';
+  if (role === 'verified_influencer') return 'vip';
+  if (role === 'advertiser') return 'ads';
+  return 'post';
+};
 
-    // routing
-    type: { type: String, enum: ['post','news','vip','ads'], default: 'post', index: true },
-    slug: { type: String, required: true, index: true },
-    path: { type: String, required: true, unique: true },
-
-    // counters (for later)
-    stats: {
-      comments: { type: Number, default: 0 },
-      votes:    { type: Number, default: 0 }
-    },
-    // moderation metadata (optional)
-    moderatorNote: { type: String, default: '' },
-    reviewedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    reviewedAt: { type: Date, default: null }
-  },
-  { timestamps: true }
-)
-
-PostSchema.index({ createdAt: -1 })
-
-module.exports = mongoose.model('Post', PostSchema)
+module.exports = mongoose.models.Post || mongoose.model('Post', PostSchema);
