@@ -188,10 +188,7 @@ export default function App() {
             </main>
           }
         />
-        <Route path="/posts/:slug" element={<PostDetailPage />} />
-        <Route path="/news/:slug" element={<PostDetailPage />} />
-        <Route path="/vip/:slug" element={<PostDetailPage />} />
-        <Route path="/ads/:slug" element={<PostDetailPage />} />
+        <Route path="/p/:slug" element={<PostDetailPage />} />
         <Route path="/u/:slug" element={<ProfilePage />} />
         <Route path="/tags/:tag" element={<TagPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />

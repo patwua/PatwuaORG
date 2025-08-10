@@ -51,7 +51,7 @@ describe('getPosts', () => {
 
     await getPosts()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/posts?status=published', { credentials: 'include' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/posts?status=active', { credentials: 'include' })
   })
 
   it('throws when response is not ok', async () => {
