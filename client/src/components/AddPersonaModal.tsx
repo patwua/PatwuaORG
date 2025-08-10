@@ -9,6 +9,7 @@ export default function AddPersonaModal({ onClose }: { onClose: () => void }) {
   const [bio, setBio] = useState('')
   const [avatar, setAvatar] = useState('')
   const [isDefault, setIsDefault] = useState(false)
+  const [kind, setKind] = useState<'post'|'news'|'vip'|'ads'>('post')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -31,7 +32,7 @@ export default function AddPersonaModal({ onClose }: { onClose: () => void }) {
   async function save() {
     setSaving(true); setError(null)
     try {
-      const p = await createPersona({ name, bio, avatar, isDefault })
+      const p = await createPersona({ name, bio, avatar, isDefault, kind })
       await reload()
       setSelectedId(p._id)
       onClose()
@@ -68,6 +69,19 @@ export default function AddPersonaModal({ onClose }: { onClose: () => void }) {
             <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)} />
             Make this my default persona
           </label>
+          <div className="mt-2">
+            <label className="text-sm">Persona type</label>
+            <select
+              className="ml-2 h-9 rounded-md border px-2 bg-white dark:bg-neutral-900"
+              value={kind}
+              onChange={e => setKind(e.target.value as any)}
+            >
+              <option value="post">Regular</option>
+              <option value="news">Publisher / News</option>
+              <option value="vip">VIP / Influencer</option>
+              <option value="ads">Advertiser</option>
+            </select>
+          </div>
           <div className="mt-4 flex items-center justify-end gap-2">
             <button className="px-3 py-2 rounded-md border" onClick={onClose}>Cancel</button>
             <button disabled={saving || name.trim().length < 2} className="px-3 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50" onClick={save}>

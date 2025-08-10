@@ -27,8 +27,12 @@ export default function PostEditor({ onClose, onCreated }: { onClose: () => void
         action: action === 'draft' ? undefined : action
       }
       const post = await createPost(payload as any)
-      onCreated(post)
-      onClose()
+      if (post?.path) {
+        window.location.assign(post.path) // go to detail if immediately published; else you can keep modal close
+      } else {
+        onCreated(post)
+        onClose()
+      }
     } catch (e: any) {
       setError(e?.message || 'Failed to save post')
     } finally {

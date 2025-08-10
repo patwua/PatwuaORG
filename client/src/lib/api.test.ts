@@ -22,6 +22,9 @@ describe('normalizePost', () => {
       commentCount: '2',
       votes: '5',
       createdAt: now,
+      path: '/post/hello',
+      slug: 'hello',
+      type: 'post',
     }
     const post = normalizePost(input)
     expect(post).toEqual({
@@ -30,6 +33,9 @@ describe('normalizePost', () => {
       excerpt: 'Sum',
       coverUrl: 'img.png',
       tags: ['a'],
+      path: '/post/hello',
+      slug: 'hello',
+      type: 'post',
       author: { name: 'John', verified: true },
       stats: { comments: 2, votes: 5 },
       createdAt: now,

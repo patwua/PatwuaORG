@@ -5,4 +5,5 @@ export type Persona = {
   avatar?: string
   isDefault?: boolean
   ownerUserId?: string
+  kind?: 'post' | 'news' | 'vip' | 'ads'
 }

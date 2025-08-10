@@ -12,6 +12,9 @@ export function normalizePost(p: any): Post {
     excerpt: p.excerpt ?? p.summary ?? (p.body ? String(p.body).slice(0, 140) : ''),
     coverUrl: p.coverUrl ?? p.image ?? undefined,
     tags: Array.isArray(p.tags) ? p.tags : [],
+    path: p.path,
+    slug: p.slug,
+    type: p.type,
     author:
       p.author ?? {
         name: p.authorName ?? p.author?.name ?? 'Unknown',
@@ -50,6 +53,14 @@ export async function getPosts(): Promise<Post[]> {
 
 export async function getPost(id: string): Promise<Post> {
   const r = await fetch(`${API}/api/posts/${id}`, { credentials: 'include' })
+  return handle(r) as Promise<Post>
+}
+
+export async function getPostBySlug(typeSegment: string, slug: string): Promise<Post> {
+  // normalize segment to backend enum
+  const map: Record<string,string> = { posts:'post', news:'news', vip:'vip', ads:'ads' }
+  const t = map[typeSegment] || 'post'
+  const r = await fetch(`${API}/api/posts/type/${t}/slug/${encodeURIComponent(slug)}`, { credentials: 'include' })
   return handle(r) as Promise<Post>
 }
 

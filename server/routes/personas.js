@@ -20,7 +20,7 @@ router.get('/', authRequired, async (req, res) => {
 // POST /api/personas  (admin)
 router.post('/', authRequired, adminOnly, async (req, res) => {
   try {
-    const { name, bio, avatar, isDefault } = req.body || {}
+    const { name, bio, avatar, isDefault, kind } = req.body || {}
     if (!name) return res.status(400).json({ error: 'name required' })
 
     if (isDefault) {
@@ -29,7 +29,12 @@ router.post('/', authRequired, adminOnly, async (req, res) => {
     }
 
     const persona = await Persona.create({
-      name, bio: bio || '', avatar: avatar || '', isDefault: !!isDefault, ownerUserId: req.user.id
+      name,
+      bio: bio || '',
+      avatar: avatar || '',
+      isDefault: !!isDefault,
+      ownerUserId: req.user.id,
+      kind: ['news','vip','ads'].includes(kind) ? kind : 'post'
     })
     res.status(201).json(persona)
   } catch (e) {
@@ -42,13 +47,18 @@ router.post('/', authRequired, adminOnly, async (req, res) => {
 router.patch('/:id', authRequired, adminOnly, async (req, res) => {
   try {
     const { id } = req.params
-    const { name, bio, avatar, isDefault } = req.body || {}
+    const { name, bio, avatar, isDefault, kind } = req.body || {}
 
     if (isDefault) {
       await Persona.updateMany({ ownerUserId: req.user.id, isDefault: true }, { $set: { isDefault: false } })
     }
 
-    const $set = { ...(bio !== undefined && { bio }), ...(avatar !== undefined && { avatar }), ...(isDefault !== undefined && { isDefault: !!isDefault }) }
+    const $set = {
+      ...(bio !== undefined && { bio }),
+      ...(avatar !== undefined && { avatar }),
+      ...(isDefault !== undefined && { isDefault: !!isDefault }),
+      ...(kind !== undefined && { kind: ['news','vip','ads'].includes(kind) ? kind : 'post' })
+    }
     if (name !== undefined) { $set.name = name; $set.nameLower = String(name).toLowerCase().trim() }
 
     const persona = await Persona.findByIdAndUpdate(id, { $set }, { new: true, runValidators: true })
