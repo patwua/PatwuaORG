@@ -9,6 +9,9 @@ export type Post = {
   personaId?: string
   authorUserId?: string
   status?: 'draft' | 'pending_review' | 'published'
+  type?: 'post' | 'news' | 'vip' | 'ads'
+  slug?: string
+  path?: string
   createdAt?: string // ISO string
   stats?: { comments: number; votes: number }
   persona?: { _id: string; name: string; avatar?: string } | null

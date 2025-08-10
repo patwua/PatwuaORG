@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getPost } from '../lib/api'
+import { getPostBySlug } from '../lib/api'
 import type { Post } from '../types/post'
 
 export default function PostDetailPage() {
-  const { id = '' } = useParams()
+  const { slug = '' } = useParams()
+  const type = window.location.pathname.split('/')[1] || 'posts'
   const [post, setPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -14,7 +15,7 @@ export default function PostDetailPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const data = await getPost(id)
+        const data = await getPostBySlug(type, slug)
         if (!alive) return
         setPost(data)
         document.title = `${data.title} • Patwua`
@@ -25,7 +26,7 @@ export default function PostDetailPage() {
       }
     })()
     return () => { alive = false }
-  }, [id])
+  }, [type, slug])
 
   if (loading) return <div className="mx-auto max-w-3xl p-4">Loading…</div>
   if (error || !post) return <div className="mx-auto max-w-3xl p-4 text-red-600">Post not found.</div>

@@ -13,6 +13,11 @@ const PostSchema = new mongoose.Schema(
     // workflow
     status: { type: String, enum: ['draft', 'pending_review', 'published'], default: 'draft', index: true },
 
+    // routing
+    type: { type: String, enum: ['post','news','vip','ads'], default: 'post', index: true },
+    slug: { type: String, required: true, index: true },
+    path: { type: String, required: true, unique: true },
+
     // counters (for later)
     stats: {
       comments: { type: Number, default: 0 },

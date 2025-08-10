@@ -8,6 +8,8 @@ const PersonaSchema = new mongoose.Schema(
     avatar: { type: String, default: '' }, // URL for now
     isDefault: { type: Boolean, default: false },
     ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // controls post routing
+    kind: { type: String, enum: ['post','news','vip','ads'], default: 'post', index: true },
   },
   { timestamps: true }
 )

@@ -60,7 +60,7 @@ export default function PostCard({
         </div>
 
         <a
-          href={`/post/${(post as any)._id || post.id}`}
+          href={post.path || `/post/${(post as any)._id || post.id}`}
           className="text-lg md:text-xl font-semibold tracking-tight mb-2 hover:underline"
         >
           {post.title}
