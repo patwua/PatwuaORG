@@ -4,7 +4,9 @@ const { shortSlug } = require('../utils/slug');
 const PostSchema = new mongoose.Schema({
   title: { type: String, required: true },
   slug: { type: String, index: true, unique: true, sparse: true },
-  body: { type: String, required: true },
+  body: { type: String, required: true }, // plain text or editor text
+  bodyHtml: { type: String },             // sanitized HTML (for html/mjml posts)
+  format: { type: String, enum: ['richtext','html','mjml'], default: 'richtext' },
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   type: { type: String, enum: ['news','vip','post','ads'], default: 'post' },
   status: { type: String, enum: ['active','archived'], default: 'active' },

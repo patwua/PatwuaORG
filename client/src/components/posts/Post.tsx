@@ -1,15 +1,15 @@
 import PostHeader from './PostHeader';
-import PostContent from './PostContent';
 import PostMedia from './PostMedia';
 import PostActions from './PostActions';
 import PostComments from './PostComments';
-import type { PostType } from '@/types/post';
+import PostContent from './PostContent';
+import type { Post as PostType } from '@/types/post';
 
 export default function Post({ post }: { post: PostType }) {
   return (
     <article className="post-card mb-6">
       <PostHeader author={post.author} timestamp={post.timestamp} />
-      <PostContent content={post.content} />
+      <PostContent post={post as any} />
       {post.media && (
         <div className="px-4 pb-4">
           <PostMedia media={post.media} />

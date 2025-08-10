@@ -79,3 +79,8 @@ html { background-color: rgb(var(--brand-bg)); }
 
 /* Dark mode body */
 .dark html, .dark body { background-color: #0a0a0a; }
+
+/* HTML post rendering tweaks */
+.post-html table { width: 100%; }
+.post-html img { max-width: 100%; height: auto; }
+.post-html a { text-decoration: underline; }

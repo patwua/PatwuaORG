@@ -5,6 +5,8 @@ export type Post = {
   excerpt?: string
   coverUrl?: string
   body?: string
+  bodyHtml?: string
+  format?: 'richtext' | 'html' | 'mjml'
   tags?: string[]
   personaId?: string
   authorUserId?: string

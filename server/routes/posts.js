@@ -1,7 +1,8 @@
 const express = require('express');
 const Post = require('../models/Post');
 const auth = require('../middleware/auth');
-const { extractTags } = require('../utils/tagAI');
+const runTagAI = require('../utils/tagAI');
+const { sanitize, compileMjml, stripToText } = require('../utils/html');
 
 const router = express.Router();
 
@@ -15,25 +16,45 @@ router.get('/', async (req, res, next) => {
 });
 
 /**
- * Create post
+ * Create post (richtext/html/mjml)
  * - type enforced by user.role (ignores client-provided type)
  * - triggers async tag AI (non-blocking)
  */
 router.post('/', auth(true), async (req, res, next) => {
   try {
-    const me = req.user; // { id, email, role }
-    const { title, body, tags = [] } = req.body || {};
-    if (!title || !body) return res.status(400).json({ error: 'Title and body required' });
+    const { title, body, html, mjml, tags = [], format } = req.body || {};
+    if (!title) return res.status(400).json({ error: 'Title required' });
 
-    const type = Post.resolveTypeForRole(me.role);
+    const postType = Post.resolveTypeForRole(req.user.role);
+    let bodyText = body || '';
+    let bodyHtml;
+    const fmt = format || 'richtext';
+
+    if (fmt === 'html' && html) {
+      bodyHtml = sanitize(html);
+      if (!bodyText) bodyText = stripToText(bodyHtml).slice(0, 600);
+    } else if (fmt === 'mjml' && mjml) {
+      const compiled = compileMjml(mjml);
+      bodyHtml = sanitize(compiled);
+      if (!bodyText) bodyText = stripToText(bodyHtml).slice(0, 600);
+    } else {
+      // richtext fallback: ensure body exists
+      if (!bodyText) return res.status(400).json({ error: 'Body required for richtext' });
+    }
+
     const doc = await Post.create({
-      title, body, author: me.id, type, tags
+      title,
+      body: bodyText,
+      bodyHtml,
+      format: fmt,
+      author: req.user.id,
+      type: postType,
+      tags
     });
 
-    // fire-and-forget tag AI
     setImmediate(async () => {
       try {
-        const suggestions = await extractTags(`${title}\n\n${body}`);
+        const suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml });
         if (Array.isArray(suggestions) && suggestions.length) {
           await Post.findByIdAndUpdate(doc._id, { $addToSet: { tags: { $each: suggestions } } });
         }

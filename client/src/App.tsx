@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage'
 import PostDetailPage from './pages/PostDetailPage'
 import TagPage from './pages/TagPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import AdminNewHtmlPost from './pages/AdminNewHtmlPost'
 import EditProfileModal from './components/EditProfileModal'
 import AddPersonaModal from './components/AddPersonaModal'
 import { useAuth } from './context/AuthContext'
@@ -192,6 +193,7 @@ export default function App() {
         <Route path="/u/:slug" element={<ProfilePage />} />
         <Route path="/tags/:tag" element={<TagPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/new-html" element={<AdminNewHtmlPost />} />
       </Routes>
 
       <BottomNav />
