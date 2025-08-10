@@ -4,7 +4,8 @@ const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 
 const router = express.Router();
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
@@ -21,7 +22,7 @@ router.post('/google', async (req, res, next) => {
     // Verify Google ID token
     const ticket = await client.verifyIdToken({
       idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
     const { email, name, picture } = payload;
@@ -49,7 +50,8 @@ router.post('/google', async (req, res, next) => {
     // HttpOnly cookie for the SPA
     res.cookie('token', token, {
       httpOnly: true,
-      sameSite: 'lax',
+      // important for client<->server on different domains:
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -64,7 +66,11 @@ router.post('/google', async (req, res, next) => {
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  res.clearCookie('token', {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  });
   return res.json({ ok: true });
 });
 
