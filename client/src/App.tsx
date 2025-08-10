@@ -20,6 +20,7 @@ import { usePersona } from './context/PersonaContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 import TrendingTags from './components/TrendingTags'
+import { AdminQuickLinks } from './components/AdminQuickLinks'
 
 function Header({ onOpenAuth, onOpenEditor, onOpenReview, onOpenEditProfile, onOpenAddPersona }: { onOpenAuth: () => void; onOpenEditor: () => void; onOpenReview: () => void; onOpenEditProfile: () => void; onOpenAddPersona: () => void }) {
   const { user, logout } = useAuth()
@@ -70,6 +71,7 @@ function Header({ onOpenAuth, onOpenEditor, onOpenReview, onOpenEditProfile, onO
               <PenSquare className="h-4 w-4" />
               <span className="hidden sm:inline">New Post</span>
             </button>
+            <AdminQuickLinks />
             <button onClick={logout} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
               Logout
             </button>
