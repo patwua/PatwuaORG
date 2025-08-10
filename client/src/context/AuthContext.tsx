@@ -17,13 +17,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // optionally decode token to prefill user; for now just mark as not loading
-    const token = getToken()
-    if (!token) {
+    // Restore from JWT in localStorage
+    ;(async () => {
+      const token = getToken()
+      if (!token) {
+        setLoading(false)
+        return
+      }
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        if (payload?.email) {
+          setUser({ id: payload.id, email: payload.email, name: payload.name, role: payload.role })
+        }
+        const res = await fetch((import.meta.env.VITE_API_BASE || '') + '/api/auth/me', {
+          credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const me = await res.json()
+          setUser(me)
+        }
+      } catch {
+        // ignore
+      }
       setLoading(false)
-      return
-    }
-    setLoading(false)
+    })()
   }, [])
 
   async function login(email: string, password: string) {
