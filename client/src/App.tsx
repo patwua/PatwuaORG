@@ -10,12 +10,14 @@ import AuthModal from './components/AuthModal'
 import PostEditor from './components/PostEditor'
 import ProfilePage from './pages/ProfilePage'
 import PostDetailPage from './pages/PostDetailPage'
+import TagPage from './pages/TagPage'
 import EditProfileModal from './components/EditProfileModal'
 import AddPersonaModal from './components/AddPersonaModal'
 import { useAuth } from './context/AuthContext'
 import { usePersona } from './context/PersonaContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
+import TrendingTags from './components/TrendingTags'
 
 function Header({ onOpenAuth, onOpenEditor, onOpenReview, onOpenEditProfile, onOpenAddPersona }: { onOpenAuth: () => void; onOpenEditor: () => void; onOpenReview: () => void; onOpenEditProfile: () => void; onOpenAddPersona: () => void }) {
   const { user, logout } = useAuth()
@@ -158,14 +160,7 @@ export default function App() {
                 <aside className="md:sticky md:top-20 md:h-[calc(100vh-6rem)] md:overflow-auto space-y-4 md:space-y-6">
                   <div className="card card-hover p-4 md:p-5">
                     <h3 className="font-semibold mb-3">Trending</h3>
-                    <ul className="space-y-2">
-                      {['Guyana', 'Energy', 'Culture'].map((t, i) => (
-                        <li key={i} className="flex items-center justify-between">
-                          <a href={`/tag/${t.toLowerCase()}`} className="text-sm hover:text-orange-700">#{t}</a>
-                          <span className="text-xs text-neutral-500">{(i+1)*42}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <TrendingTags />
                   </div>
 
                   <div className="card card-hover p-4 md:p-5">
@@ -197,6 +192,7 @@ export default function App() {
         <Route path="/vip/:slug" element={<PostDetailPage />} />
         <Route path="/ads/:slug" element={<PostDetailPage />} />
         <Route path="/u/:slug" element={<ProfilePage />} />
+        <Route path="/tags/:tag" element={<TagPage />} />
       </Routes>
 
       <BottomNav />
