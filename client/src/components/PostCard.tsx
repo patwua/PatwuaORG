@@ -59,7 +59,12 @@ export default function PostCard({
           </div>
         </div>
 
-        <h2 className="text-lg md:text-xl font-semibold tracking-tight mb-2">{post.title}</h2>
+        <a
+          href={`/post/${(post as any)._id || post.id}`}
+          className="text-lg md:text-xl font-semibold tracking-tight mb-2 hover:underline"
+        >
+          {post.title}
+        </a>
         {post.excerpt && <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">AI · {post.excerpt}</p>}
 
         <TagChips tags={post.tags} />

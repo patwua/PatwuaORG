@@ -48,6 +48,11 @@ export async function getPosts(): Promise<Post[]> {
   )
 }
 
+export async function getPost(id: string): Promise<Post> {
+  const r = await fetch(`${API}/api/posts/${id}`, { credentials: 'include' })
+  return handle(r) as Promise<Post>
+}
+
 export async function createPost(payload: { title: string; body: string; tags: string[]; personaId: string; action?: 'publish' | 'submit' }) {
   const r = await fetch(`${API}/api/posts`, {
     method: 'POST',

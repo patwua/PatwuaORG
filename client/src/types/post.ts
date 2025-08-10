@@ -1,10 +1,16 @@
 export type Post = {
-  id: string
+  id?: string
+  _id?: string
   title: string
   excerpt?: string
   coverUrl?: string
+  body?: string
   tags?: string[]
-  author?: { name: string; verified?: boolean; avatar?: string }
-  stats?: { comments: number; votes: number }
+  personaId?: string
+  authorUserId?: string
+  status?: 'draft' | 'pending_review' | 'published'
   createdAt?: string // ISO string
+  stats?: { comments: number; votes: number }
+  persona?: { _id: string; name: string; avatar?: string } | null
+  author?: { _id: string; name: string; slug?: string; verified?: boolean; avatar?: string } | null
 }
