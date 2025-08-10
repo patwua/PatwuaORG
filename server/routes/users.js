@@ -24,9 +24,24 @@ router.get('/:slug/personas', async (req, res) => {
 
 // Self profile
 router.get('/me/profile', authRequired, async (req, res) => {
-  const u = await User.findById(req.user.id).lean()
+  let u = await User.findById(req.user.id)
   if (!u) return res.status(404).json({ error: 'User not found' })
-  const { _id, email, name, avatar, bio, location, categories, role, slug, verified } = u
+  if (!u.slug) {
+    const base = (u.name || 'user')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+    let slug = base || `user-${u._id.toString().slice(-6)}`
+    // ensure uniqueness
+    let i = 1
+    while (await User.findOne({ slug })) {
+      slug = `${base}-${i++}`
+    }
+    u.slug = slug
+    await u.save()
+  }
+  const { _id, email, name, avatar, bio, location, categories, role, slug, verified } = u.toObject()
   res.json({ id: _id, email, name, avatar, bio, location, categories, role, slug, verified })
 })
 

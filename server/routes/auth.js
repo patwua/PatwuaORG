@@ -34,7 +34,7 @@ router.post('/login', async (req, res) => {
       user.role = 'admin'
       await user.save()
     }
-    const payload = { id: user._id.toString(), email: user.email, name: user.name, role: user.role }
+    const payload = { id: user._id.toString(), email: user.email, name: user.name, role: user.role, slug: user.slug }
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' })
     res.json({ token, user: payload })
   } catch {
@@ -43,7 +43,10 @@ router.post('/login', async (req, res) => {
 })
 
 router.get('/me', authRequired, async (req, res) => {
-  res.json({ id: req.user.id, email: req.user.email, name: req.user.name, role: req.user.role })
+  // fetch from DB to also return slug
+  const u = await User.findById(req.user.id).lean()
+  if (!u) return res.status(404).json({ error: 'User not found' })
+  res.json({ id: u._id, email: u.email, name: u.name, role: u.role, slug: u.slug })
 })
 
 module.exports = router
