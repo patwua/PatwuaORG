@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { getPublicProfile, getUserPersonas } from '../lib/users'
+import { useParams, useNavigate } from 'react-router-dom'
+import { getPublicProfile, getUserPersonas, getMyProfile } from '../lib/users'
 import type { Persona } from '../types/persona'
 import { avatarUrl } from '../lib/upload'
 
@@ -8,6 +8,7 @@ type PublicUser = { id:string; slug:string; name:string; avatar?:string; bio?:st
 
 export default function ProfilePage() {
   const { slug = '' } = useParams()
+  const navigate = useNavigate()
   const [user, setUser] = useState<PublicUser | null>(null)
   const [personas, setPersonas] = useState<Persona[]>([])
   const [loading, setLoading] = useState(true)
@@ -18,8 +19,18 @@ export default function ProfilePage() {
     ;(async () => {
       try {
         setLoading(true)
-        const u = await getPublicProfile(slug)
-        const ps = await getUserPersonas(slug)
+        // Support /u/me
+        let targetSlug = slug
+        if (slug === 'me') {
+          const me = await getMyProfile()
+          if (me?.slug) {
+            targetSlug = me.slug
+            // replace URL so refreshes keep working
+            navigate(`/u/${targetSlug}`, { replace: true })
+          }
+        }
+        const u = await getPublicProfile(targetSlug)
+        const ps = await getUserPersonas(targetSlug)
         if (!alive) return
         setUser(u); setPersonas(ps)
       } catch (e:any) {

@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]))
         if (payload?.email) {
-          setUser({ id: payload.id, email: payload.email, name: payload.name, role: payload.role })
+          setUser({ id: payload.id, email: payload.email, name: payload.name, role: payload.role, slug: payload.slug })
         }
         const res = await fetch((import.meta.env.VITE_API_BASE || '') + '/api/auth/me', {
           credentials: 'include',
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
         if (res.ok) {
           const me = await res.json()
-          setUser(me)
+          setUser(me) // includes slug now
         }
       } catch {
         // ignore

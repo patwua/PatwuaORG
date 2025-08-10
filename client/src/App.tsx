@@ -46,7 +46,7 @@ function Header({ onOpenAuth, onOpenEditor, onOpenReview, onOpenEditProfile, onO
         </button>
         {user ? (
           <>
-            <button onClick={() => navigate(`/u/${user?.slug ?? 'me'}`)} className="text-sm underline hidden sm:inline">Hi, {user.name}</button>
+            <button onClick={() => navigate(`/u/${user?.slug || 'me'}`)} className="text-sm underline hidden sm:inline">Hi, {user.name}</button>
             {user.role === 'admin' && (
               <button onClick={onOpenAddPersona} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
                 Add Persona
