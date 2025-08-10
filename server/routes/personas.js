@@ -1,13 +1,13 @@
 // Admin-managed personas; readable by all authenticated users
 const express = require('express')
 const Persona = require('../models/Persona')
-const { authRequired } = require('../middleware/auth')
-const { adminOnly } = require('../middleware/adminOnly')
+const auth = require('../middleware/auth')
+const adminOnly = require('../middleware/adminOnly')
 
 const router = express.Router()
 
 // GET /api/personas  (any authed user can list; admins will see theirs; non-admins see public list)
-router.get('/', authRequired, async (req, res) => {
+router.get('/', auth(), async (req, res) => {
   try {
     // for now: return all personas (or you can scope to ownerUserId if you want per-admin isolation)
     const items = await Persona.find().sort({ updatedAt: -1 }).lean()
@@ -18,7 +18,7 @@ router.get('/', authRequired, async (req, res) => {
 })
 
 // POST /api/personas  (admin)
-router.post('/', authRequired, adminOnly, async (req, res) => {
+router.post('/', auth(), adminOnly, async (req, res) => {
   try {
     const { name, bio, avatar, isDefault, kind } = req.body || {}
     if (!name) return res.status(400).json({ error: 'name required' })
@@ -44,7 +44,7 @@ router.post('/', authRequired, adminOnly, async (req, res) => {
 })
 
 // PATCH /api/personas/:id  (admin)
-router.patch('/:id', authRequired, adminOnly, async (req, res) => {
+router.patch('/:id', auth(), adminOnly, async (req, res) => {
   try {
     const { id } = req.params
     const { name, bio, avatar, isDefault, kind } = req.body || {}
@@ -71,7 +71,7 @@ router.patch('/:id', authRequired, adminOnly, async (req, res) => {
 })
 
 // DELETE /api/personas/:id  (admin)
-router.delete('/:id', authRequired, adminOnly, async (req, res) => {
+router.delete('/:id', auth(), adminOnly, async (req, res) => {
   try {
     const { id } = req.params
     const persona = await Persona.findByIdAndDelete(id)

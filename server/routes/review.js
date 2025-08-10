@@ -1,11 +1,11 @@
 const express = require('express')
 const Post = require('../models/Post')
-const { authRequired } = require('../middleware/auth')
+const auth = require('../middleware/auth')
 
 const router = express.Router()
 
 // Guard: admin only for all routes here
-router.use(authRequired, (req, res, next) => {
+router.use(auth(), (req, res, next) => {
   if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' })
   next()
 })
