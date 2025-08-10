@@ -82,9 +82,16 @@ export default function PostDetailPage() {
       )}
 
       {/* Body */}
-      <div className="prose dark:prose-invert max-w-none">
-        {post.body?.split('\n').map((p, i) => <p key={i}>{p}</p>)}
-      </div>
+      {post.bodyHtml ? (
+        <div
+          className="prose dark:prose-invert max-w-none post-html"
+          dangerouslySetInnerHTML={{ __html: post.bodyHtml }}
+        />
+      ) : (
+        <div className="prose dark:prose-invert max-w-none">
+          {post.body?.split('\n').map((p, i) => <p key={i}>{p}</p>)}
+        </div>
+      )}
 
       {/* Footer actions (placeholder) */}
       <footer className="flex items-center justify-between pt-4 border-t">
