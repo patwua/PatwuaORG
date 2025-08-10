@@ -16,7 +16,7 @@ const app = express();
 
 // CORS for Vite client (credentials so cookies work)
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN,
+  origin: process.env.ALLOWED_ORIGIN,
   credentials: true,
 }));
 
