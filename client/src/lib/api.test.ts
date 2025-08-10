@@ -31,7 +31,7 @@ describe('normalizePost', () => {
       id: '123',
       title: 'Hello',
       excerpt: 'Sum',
-      coverUrl: 'img.png',
+      coverImage: 'img.png',
       tags: ['a'],
       path: '/post/hello',
       slug: 'hello',

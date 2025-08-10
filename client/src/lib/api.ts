@@ -17,7 +17,7 @@ export function normalizePost(p: any): Post {
     id: p._id ?? p.id ?? crypto.randomUUID(),
     title: p.title ?? 'Untitled',
     excerpt: p.excerpt ?? p.summary ?? (p.body ? String(p.body).slice(0, 140) : ''),
-    coverUrl: p.coverUrl ?? p.image ?? undefined,
+    coverImage: p.coverImage ?? p.coverUrl ?? p.image ?? undefined,
     body: p.body,
     bodyHtml: p.bodyHtml,
     format: p.format,
@@ -34,6 +34,7 @@ export function normalizePost(p: any): Post {
       comments: Number(p.stats?.comments ?? p.commentCount ?? p.comments ?? 0),
       votes: Number(p.stats?.votes ?? p.votes ?? p.score ?? 0),
     },
+    media: Array.isArray(p.media) ? p.media : undefined,
     // prefer createdAt, fall back to timestamp/updatedAt
     createdAt: p.createdAt ?? p.timestamp ?? p.updatedAt ?? new Date().toISOString(),
   }

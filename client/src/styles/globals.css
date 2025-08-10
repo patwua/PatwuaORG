@@ -84,3 +84,11 @@ html { background-color: rgb(var(--brand-bg)); }
 .post-html table { width: 100%; }
 .post-html img { max-width: 100%; height: auto; }
 .post-html a { text-decoration: underline; }
+.post-html img.align-center { display:block; margin:1rem auto; }
+.post-html img.float-left { float:left; margin:0.25rem 1rem 1rem 0; max-width:50%; }
+.post-html img.float-right { float:right; margin:0.25rem 0 1rem 1rem; max-width:50%; }
+.post-html img.wide { width:100%; height:auto; }
+.post-html .full-bleed { width:100vw; margin-left:calc(50% - 50vw); }
+.post-html figure { margin:1rem 0; }
+.post-html figcaption { font-size:0.875rem; color:#666; text-align:center; margin-top:0.25rem; }
+.post-html iframe, .post-html video { max-width:100%; width:100%; height:auto; aspect-ratio:16/9; }
