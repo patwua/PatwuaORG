@@ -1,7 +1,5 @@
-function adminOnly(req, res, next) {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin only' })
-  }
-  next()
-}
-module.exports = { adminOnly }
+module.exports = function adminOnly(req, res, next) {
+  const role = req.user?.role;
+  if (role === 'system_admin' || role === 'admin') return next();
+  return res.status(403).json({ error: 'Forbidden' });
+};

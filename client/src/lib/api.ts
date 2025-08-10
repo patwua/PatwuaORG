@@ -1,6 +1,13 @@
+import axios from 'axios'
 import type { Post } from '../types/post'
 
 const API = import.meta.env.VITE_API_BASE || ''
+
+export const api = axios.create({
+  baseURL: `${API}/api`,
+  withCredentials: true,
+})
+
 const token = () => localStorage.getItem('token')
 const headers = () => ({ 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) })
 

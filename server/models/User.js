@@ -1,14 +1,30 @@
-const mongoose = require('mongoose')
-const bcrypt = require('bcrypt')
+const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema(
   {
-    email: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
-    passwordHash: { type: String, required: true },
-    avatar: { type: String, default: '' },
-    verified: { type: Boolean, default: false },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    email: { type: String, required: true, unique: true, index: true },
+    image: String,
+    role: {
+      type: String,
+      enum: [
+        'user',
+        'moderator',
+        'verified_influencer',
+        'verified_publisher',
+        'advertiser',
+        'admin',
+        'system_admin',
+      ],
+      default: 'user',
+    },
+    verified: {
+      status: { type: Boolean, default: false },
+      role: { type: String, enum: ['influencer', 'publisher', null], default: null },
+      verifiedAt: Date,
+      verifiedBy: String,
+      reason: String,
+    },
     // profile fields
     slug: { type: String, unique: true, index: true, sparse: true },
     bio: { type: String, default: '' },
@@ -16,11 +32,7 @@ const UserSchema = new mongoose.Schema(
     categories: { type: [String], default: [] },
   },
   { timestamps: true }
-)
-
-UserSchema.methods.comparePassword = function (pw) {
-  return bcrypt.compare(pw, this.passwordHash)
-}
+);
 
 // Ensure a stable slug (first set = from name; can be edited later)
 UserSchema.pre('save', function (next) {
@@ -29,11 +41,10 @@ UserSchema.pre('save', function (next) {
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-    this.slug = base || `user-${this._id}`
+      .replace(/^-+|-+$/g, '');
+    this.slug = base || `user-${this._id}`;
   }
-  next()
-})
+  next();
+});
 
-module.exports = mongoose.model('User', UserSchema)
-
+module.exports = mongoose.models.User || mongoose.model('User', UserSchema);

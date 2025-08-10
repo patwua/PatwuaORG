@@ -1,48 +1,71 @@
-const express = require('express')
-const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken')
-const User = require('../models/User')
-const { authRequired } = require('../middleware/auth')
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
+const User = require('../models/User');
 
-const router = express.Router()
-const SALT_ROUNDS = 10
+const router = express.Router();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-router.post('/register', async (req, res) => {
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+// POST /api/auth/google
+// Body: { credential: string }  // Google ID token from @react-oauth/google
+router.post('/google', async (req, res, next) => {
   try {
-    const { email, name, password } = req.body || {}
-    if (!email || !name || !password) return res.status(400).json({ error: 'email, name, password required' })
-    const exists = await User.findOne({ email })
-    if (exists) return res.status(409).json({ error: 'Email already in use' })
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
-    const user = await User.create({ email, name, passwordHash })
-    res.status(201).json({ id: user._id, email: user.email, name: user.name })
-  } catch (e) {
-    res.status(500).json({ error: 'Registration failed' })
-  }
-})
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Missing credential' });
 
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body || {}
-    if (!email || !password) return res.status(400).json({ error: 'email and password required' })
-    const user = await User.findOne({ email })
-    if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ error: 'Invalid credentials' })
+    // Verify Google ID token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    if (!email) return res.status(400).json({ error: 'No email in Google profile' });
+
+    // Find or create user
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        email,
+        name: name || email.split('@')[0],
+        image: picture || null,
+        role: ADMIN_EMAILS.includes(email) ? 'system_admin' : 'user',
+      });
     }
-    const payload = { id: user._id.toString(), email: user.email, name: user.name, role: user.role, slug: user.slug }
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' })
-    res.json({ token, user: payload })
-  } catch {
-    res.status(500).json({ error: 'Login failed' })
+
+    // Issue our JWT
+    const token = jwt.sign(
+      { sub: String(user._id), email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // HttpOnly cookie for the SPA
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({
+      user: { id: user._id, email: user.email, name: user.name, image: user.image, role: user.role },
+    });
+  } catch (err) {
+    next(err);
   }
-})
+});
 
-router.get('/me', authRequired, async (req, res) => {
-  // fetch from DB to also return slug
-  const u = await User.findById(req.user.id).lean()
-  if (!u) return res.status(404).json({ error: 'User not found' })
-  res.json({ id: u._id, email: u.email, name: u.name, role: u.role, slug: u.slug })
-})
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  return res.json({ ok: true });
+});
 
-module.exports = router
-
+module.exports = router;

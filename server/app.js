@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
@@ -12,21 +13,15 @@ const reviewRoutes = require('./routes/review');
 const usersRoutes  = require('./routes/users');
 
 const app = express();
-const allowed = process.env.ALLOWED_ORIGIN;
 
-const corsOptions = {
-  origin(origin, cb) {
-    if (!origin) return cb(null, true); // allow server-to-server / curl
-    cb(null, origin === allowed); // exact match only
-  },
+// CORS for Vite client (credentials so cookies work)
+app.use(cors({
+  origin: process.env.CLIENT_ORIGIN,
   credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
+}));
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // preflight
 app.use(express.json());
+app.use(cookieParser());
 
 app.get('/healthz', (_req, res) => res.send('ok'));
 
