@@ -370,7 +370,8 @@ router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
     if (draft.coverImage !== undefined) post.coverImage = draft.coverImage || undefined;
 
     const hashTags = post.bodyHtml ? extractHashtagsFromHtml(post.bodyHtml) : extractHashtagsFromText(post.body);
-    post.tags = hashTags;
+    const baseTags = Array.isArray(draft.tags) ? draft.tags : [];
+    post.tags = normalize([ ...baseTags, ...hashTags ]);
 
     post.editedAt = new Date();
     post.editedBy = req.user.id;
@@ -379,7 +380,7 @@ router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
     setImmediate(async () => {
       try {
         const suggestions = await runTagAI({ title: post.title, body: post.body, html: post.bodyHtml }) || [];
-        const final = normalize([...hashTags, ...suggestions]);
+        const final = normalize([ ...baseTags, ...hashTags, ...suggestions ]);
         await Post.findByIdAndUpdate(post._id, { tags: final });
       } catch {}
     });

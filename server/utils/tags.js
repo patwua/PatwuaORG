@@ -1,3 +1,5 @@
+const cheerio = require('cheerio');
+
 const STOP = new Set([
   'style','font','px','div','span','table','td','tr','br','color','size',
   'img','src','http','https','width','height','left','right','center','block',
@@ -14,6 +16,7 @@ function normalizeTag(t = '') {
   if (!out || out.length < 2) return null;
   if (STOP.has(out)) return null;
   if (!/^[a-z0-9-]+$/.test(out)) return null;
+  if (/^[0-9a-f]{3,8}$/.test(out)) return null; // likely hex color
   return out.slice(0, 40);
 }
 
@@ -27,8 +30,10 @@ function normalize(arr = []) {
 }
 
 function extractHashtagsFromHtml(html = '') {
-  const matches = html.match(/#[A-Za-z0-9][A-Za-z0-9_-]{1,30}/g) || [];
-  return normalize(matches.map(s => s.replace(/^#/, '')));
+  const $ = cheerio.load(html || '');
+  $('style,script').remove();
+  const text = $.root().text();
+  return extractHashtagsFromText(text);
 }
 
 function extractHashtagsFromText(text = '') {

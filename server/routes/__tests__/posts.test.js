@@ -158,5 +158,30 @@ describe('draft routes', () => {
     expect(res.status).toBe(200);
     expect(savedTags).toEqual(['tag']);
   });
+
+  test('publishing draft merges saved tags with hashtags', async () => {
+    const postId = new mongoose.Types.ObjectId();
+    const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
+
+    const draft = { _id: new mongoose.Types.ObjectId(), content: '<p>#Hello world</p>', tags: ['custom'] };
+    jest.spyOn(PostDraft, 'findOne').mockResolvedValue(draft);
+    jest.spyOn(PostDraft, 'deleteOne').mockResolvedValue({});
+
+    const postDoc = { _id: postId, author: user._id, save: jest.fn().mockResolvedValue(true), body: '', title: 't' };
+    jest.spyOn(Post, 'findById').mockResolvedValue(postDoc);
+    const updateSpy = jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
+
+    const res = await request(app)
+      .post(`/api/posts/${postId}/draft/publish`)
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send();
+
+    expect(res.status).toBe(200);
+    expect(postDoc.tags).toEqual(expect.arrayContaining(['custom', 'hello']));
+
+    await new Promise(r => setImmediate(r));
+    const finalTags = updateSpy.mock.calls[0][1].tags;
+    expect(finalTags).toEqual(expect.arrayContaining(['custom', 'hello']));
+  });
 });
 
