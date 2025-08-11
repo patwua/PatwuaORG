@@ -16,6 +16,7 @@ export default function AdminNewHtmlPost() {
   const [coverSuggested, setCoverSuggested] = useState<string | null>(null);
   const [coverOverride, setCoverOverride] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const canPost = !!user && (['system_admin','admin','verified_publisher','verified_influencer','advertiser'].includes(user.role));
 
@@ -23,13 +24,15 @@ export default function AdminNewHtmlPost() {
   if (!canPost) return <div className="p-4">Forbidden</div>;
 
   const doPreview = async () => {
-    setBusy(true);
+    setBusy(true); setError(null);
     try {
       const { data } = await api.post('/posts/preview', { content });
       setPreviewHtml(data.html);
       setImages(data.media?.images || []);
       setVideos(data.media?.videos || []);
       setCoverSuggested(data.coverSuggested || null);
+    } catch (e: any) {
+      setError(e?.response?.data?.error || 'Preview failed');
     } finally {
       setBusy(false);
     }
@@ -95,6 +98,7 @@ export default function AdminNewHtmlPost() {
           {busy ? 'Publishing…' : 'Publish'}
         </button>
       </div>
+      {error && <div className="text-sm text-red-600">{error}</div>}
 
       {/* Cover picker */}
       {(images.length > 0 || videos.length > 0) && (

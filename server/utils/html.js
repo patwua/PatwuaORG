@@ -42,9 +42,16 @@ function stripToText(html) {
 }
 
 function detectFormat(payload = '') {
-  const s = (payload || '').trim();
-  if (/^<\s*mjml[\s>]/i.test(s)) return 'mjml';
-  if (/^<\s*html[\s>]/i.test(s) || /^<\s*(div|table|section|article|figure)[\s>]/i.test(s)) return 'html';
+  // strip BOM, doctype, and leading comments/whitespace
+  let s = (payload || '').trim().replace(/^\uFEFF/, '');
+  s = s.replace(/^<!doctype[^>]*>\s*/i, '');
+  s = s.replace(/^<!--[\s\S]*?-->\s*/g, ''); // any leading comments
+
+  if (/<\s*mjml[\s>]/i.test(s)) return 'mjml';
+  if (/<\s*html[\s>]/i.test(s)) return 'html';
+  if (/^<\s*(div|table|section|article|figure|p|body|head)[\s>]/i.test(s)) return 'html';
+  // last resort: if it contains any HTML tag at all, treat as html
+  if (/<[a-z!][\s\S]*>/i.test(s)) return 'html';
   return 'richtext';
 }
 

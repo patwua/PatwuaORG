@@ -3,6 +3,8 @@ const Post = require('../models/Post');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
+const cheerio = require('cheerio');
+const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
 
 const router = express.Router();
 
@@ -98,6 +100,19 @@ router.post('/', auth(true), async (req, res, next) => {
       coverImage: cover || undefined,
       media,
     });
+
+    // Replace CTA token with the real post URL
+    if (bodyHtml) {
+      const $ = cheerio.load(bodyHtml);
+      $('a[href="[[POST_URL]]"], a[data-cta="join"]').each((_, el) => {
+        const url = `${SITE}/p/${doc.slug}`;
+        $(el).attr('href', url);
+        $(el).attr('target', '_self');
+        $(el).attr('rel', 'noopener');
+      });
+      bodyHtml = $.html();
+      await Post.findByIdAndUpdate(doc._id, { bodyHtml });
+    }
 
     // async tag AI
     setImmediate(async () => {
