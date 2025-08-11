@@ -36,6 +36,9 @@ export function normalizePost(p: any): Post {
     stats: {
       comments: Number(p.stats?.comments ?? p.commentCount ?? p.comments ?? 0),
       votes: Number(p.stats?.votes ?? p.votes ?? p.score ?? 0),
+      up: Number(p.stats?.up ?? p.up ?? 0),
+      down: Number(p.stats?.down ?? p.down ?? 0),
+      myVote: typeof (p.stats?.myVote ?? p.myVote) === 'number' ? Number(p.stats?.myVote ?? p.myVote) : undefined,
     },
     media: Array.isArray(p.media) ? p.media : undefined,
     // prefer createdAt, fall back to timestamp/updatedAt
@@ -100,12 +103,10 @@ export async function publishPost(id: string) {
 }
 
 // Optional: example mutation (wire later)
-export async function votePost(id: string, dir: 'up' | 'down'): Promise<{ votes: number }> {
-  const res = await fetch(`${API_BASE}/api/posts/${id}/vote`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: headers(),
-    body: JSON.stringify({ dir }),
-  })
-  return handle(res)
+export async function votePost(
+  id: string,
+  dir: 'up' | 'down'
+): Promise<{ score: number; up: number; down: number; myVote: number }> {
+  const { data } = await api.post(`/posts/${id}/vote`, { dir })
+  return data
 }

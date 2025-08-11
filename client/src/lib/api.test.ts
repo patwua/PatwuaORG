@@ -37,9 +37,28 @@ describe('normalizePost', () => {
       slug: 'hello',
       type: 'post',
       author: { name: 'John', verified: true },
-      stats: { comments: 2, votes: 5 },
+      stats: { comments: 2, votes: 5, up: 0, down: 0, myVote: undefined },
       createdAt: now,
     })
+  })
+
+  it('uses provided vote stats', () => {
+    const post = normalizePost({
+      _id: '1',
+      title: 'Hi',
+      stats: { comments: 0, votes: 7, up: 5, down: 2, myVote: -1 },
+    })
+    expect(post.stats).toEqual({ comments: 0, votes: 7, up: 5, down: 2, myVote: -1 })
+  })
+
+  it('reads vote stats from top-level fields', () => {
+    const post = normalizePost({ _id: '3', title: 'Top', up: '4', down: '1', myVote: 0 })
+    expect(post.stats).toEqual({ comments: 0, votes: 0, up: 4, down: 1, myVote: 0 })
+  })
+
+  it.each([undefined, 'nope'])('handles non-numeric myVote %p', (val) => {
+    const post = normalizePost({ _id: '2', title: 'T', stats: { votes: 0, up: 0, down: 0, myVote: val } })
+    expect(post.stats.myVote).toBeUndefined()
   })
 })
 
@@ -70,8 +89,21 @@ describe('getPosts', () => {
       id: '1',
       tags: [],
       author: { name: 'Unknown', verified: false },
-      stats: { comments: 1, votes: 2 },
+      stats: { comments: 1, votes: 2, up: 0, down: 0, myVote: undefined },
     })
+  })
+
+  it('preserves upstream vote stats', async () => {
+    const data = [
+      { _id: '1', title: 'Hi', stats: { comments: 1, votes: 2, up: 3, down: 4, myVote: 1 } },
+    ]
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve(data) } as any)
+    globalThis.fetch = fetchMock as any
+
+    const result = await getPosts()
+    expect(result[0].stats).toEqual({ comments: 1, votes: 2, up: 3, down: 4, myVote: 1 })
   })
 
   it('supports items array shape', async () => {
