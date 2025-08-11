@@ -108,7 +108,10 @@ export default function PostCard({
               <ArrowBigDown className="h-5 w-5" />
             </button>
           </div>
-          <a href="#comments" className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-orange-700">
+          <a
+            href={post.slug ? `/p/${post.slug}#comments` : '#comments'}
+            className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-orange-700"
+          >
             <MessageSquareText className="h-4 w-4" />
             <span>{post.stats?.comments ?? 0} comments</span>
           </a>

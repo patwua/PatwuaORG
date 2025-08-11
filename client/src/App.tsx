@@ -118,11 +118,24 @@ export default function App() {
   }, [])
 
   async function onVote(id: string, dir: 'up' | 'down') {
-    const { votes } = await votePost(id, dir)
+    const { score, up, down, myVote } = await votePost(id, dir)
     setPosts(prev =>
-      prev.map(p => (p.id === id ? { ...p, stats: { ...(p.stats || { comments: 0, votes: 0 }), votes } } : p))
+      prev.map(p =>
+        p.id === id
+          ? {
+              ...p,
+              stats: {
+                ...(p.stats || { comments: 0, votes: 0 }),
+                votes: score,
+                up,
+                down,
+                myVote,
+              },
+            }
+          : p
+      )
     )
-    return votes
+    return score
   }
 
   return (

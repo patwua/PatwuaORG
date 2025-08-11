@@ -15,7 +15,7 @@ export type Post = {
   slug?: string
   path?: string
   createdAt?: string // ISO string
-  stats?: { comments: number; votes: number }
+  stats?: { comments: number; votes: number; up?: number; down?: number; myVote?: number }
   summaryAI?: string
   media?: { kind: 'image' | 'video'; url: string; alt?: string; width?: number; height?: number; poster?: string }[]
   persona?: { _id: string; name: string; avatar?: string } | null
