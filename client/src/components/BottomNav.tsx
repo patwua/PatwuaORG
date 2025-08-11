@@ -1,16 +1,15 @@
-import { Home, Tag, Bell, PencilLine } from 'lucide-react'
+import { Home, Tag, Bell } from 'lucide-react'
 
 export default function BottomNav() {
   const pathname = window.location.pathname
   const items = [
     { href: '/', icon: Home, label: 'Home' },
     { href: '/topics', icon: Tag, label: 'Topics' },
-    { href: '/post/new', icon: PencilLine, label: 'Post' },
     { href: '/notifications', icon: Bell, label: 'Alerts' },
   ]
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 safe-bottom border-t border-neutral-200/60 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/90 backdrop-blur z-40">
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-3">
         {items.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (

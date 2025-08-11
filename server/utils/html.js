@@ -4,7 +4,7 @@ const cheerio = require('cheerio');
 
 const allowedTags = sanitizeHtml.defaults.allowedTags.concat([
   'img','table','thead','tbody','tfoot','tr','td','th',
-  'iframe','video','source','figure','figcaption','section','article','header','footer','style'
+  'iframe','video','source','figure','figcaption','section','article','header','footer','style','p','div','span','h1','h2','h3','h4','h5','h6'
 ]);
 
 const allowedAttributes = {
@@ -18,7 +18,7 @@ const allowedAttributes = {
 
 function transformTags(tagName, attribs) {
   if (tagName === 'a') {
-    return { tagName: 'a', attribs: { ...attribs, target: '_blank', rel: 'noopener noreferrer nofollow' } };
+    return { tagName: 'a', attribs: { ...attribs, target: '_self', rel: 'noopener' } };
   }
   return { tagName, attribs };
 }
@@ -42,16 +42,12 @@ function stripToText(html) {
 }
 
 function detectFormat(payload = '') {
-  // strip BOM, doctype, and leading comments/whitespace
   let s = (payload || '').trim().replace(/^\uFEFF/, '');
   s = s.replace(/^<!doctype[^>]*>\s*/i, '');
-  s = s.replace(/^<!--[\s\S]*?-->\s*/g, ''); // any leading comments
-
-  if (/<\s*mjml[\s>]/i.test(s)) return 'mjml';
-  if (/<\s*html[\s>]/i.test(s)) return 'html';
-  if (/^<\s*(div|table|section|article|figure|p|body|head)[\s>]/i.test(s)) return 'html';
-  // last resort: if it contains any HTML tag at all, treat as html
-  if (/<[a-z!][\s\S]*>/i.test(s)) return 'html';
+  s = s.replace(/^<!--[\s\S]*?-->\s*/g, '');
+  if (/^<\s*mjml[\s>]/i.test(s)) return 'mjml';
+  if (/<\s*html[\s>]/i.test(s) || /^<\s*(div|section|table|p|body)[\s>]/i.test(s)) return 'html';
+  if (/<[a-z][\s\S]*>/i.test(s)) return 'html';
   return 'richtext';
 }
 

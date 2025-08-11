@@ -6,16 +6,15 @@ const STOP = new Set([
 
 function normalizeTag(t = '') {
   const k = String(t).toLowerCase().trim()
-    .replace(/^#+/, '')                  // strip leading #
-    .replace(/[#.,:;()<>\/\\'"!?]/g, ' ') // strip punct
+    .replace(/^#+/, '')
+    .replace(/[#.,:;()<>\/\\'"!?]/g, ' ')
     .replace(/\s+/g, ' ');
   const parts = k.split(' ').filter(Boolean);
-  // join back with '-' so "we are" -> "we-are"
   const out = parts.join('-');
   if (!out || out.length < 2) return null;
   if (STOP.has(out)) return null;
   if (!/^[a-z0-9-]+$/.test(out)) return null;
-  return out.slice(0, 40); // keep it tidy
+  return out.slice(0, 40);
 }
 
 function normalize(arr = []) {
@@ -28,7 +27,6 @@ function normalize(arr = []) {
 }
 
 function extractHashtagsFromHtml(html = '') {
-  // find #tags in visible text (this is simple & effective)
   const matches = html.match(/#[A-Za-z0-9][A-Za-z0-9_-]{1,30}/g) || [];
   return normalize(matches.map(s => s.replace(/^#/, '')));
 }
