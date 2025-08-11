@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getTrendingTags } from '../lib/tags'
 
 interface Trend { tag: string; count: number }
@@ -34,7 +35,7 @@ export default function TrendingTags({ limit = 5, sinceDays = 7 }: { limit?: num
     <ul className="space-y-2">
       {tags.map(t => (
         <li key={t.tag} className="flex items-center justify-between">
-          <a href={`/tags/${encodeURIComponent(t.tag)}`} className="text-sm hover:text-orange-700">#{t.tag}</a>
+          <Link to={`/tag/${encodeURIComponent(t.tag.toLowerCase())}`} className="text-sm hover:text-orange-700">#{t.tag}</Link>
           <span className="text-xs text-neutral-500">{t.count}</span>
         </li>
       ))}

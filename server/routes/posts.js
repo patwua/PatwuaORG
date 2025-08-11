@@ -1,8 +1,10 @@
 const express = require('express');
 const Post = require('../models/Post');
+const Persona = require('../models/Persona');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
+const { normalize } = require('../utils/tags');
 
 const router = express.Router();
 
@@ -55,7 +57,7 @@ router.post('/preview', auth(true), async (req, res, next) => {
  */
 router.post('/', auth(true), async (req, res, next) => {
   try {
-    const { title, content = '', tags = [], coverImage } = req.body || {};
+    const { title, content = '', tags = [], coverImage, personaId } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
 
     const fmt = detectFormat(content);
@@ -87,6 +89,23 @@ router.post('/', auth(true), async (req, res, next) => {
       if (!cover) cover = chooseCover(m);
     }
 
+    // persona (explicit or default)
+    let persona = null;
+    if (personaId) {
+      persona = await Persona.findOne({ _id: personaId, ownerUserId: req.user.id }).lean();
+    } else {
+      persona = await Persona.findOne({ ownerUserId: req.user.id, isDefault: true }).lean();
+    }
+
+    // tags (user + AI suggestions)
+    let suggestions = [];
+    try {
+      suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml });
+    } catch {}
+    const userTags = Array.isArray(tags) ? tags : [];
+    const aiTags = Array.isArray(suggestions) ? suggestions : [];
+    const finalTags = normalize([...userTags, ...aiTags]);
+
     const doc = await Post.create({
       title,
       body: bodyText,
@@ -94,19 +113,12 @@ router.post('/', auth(true), async (req, res, next) => {
       format: fmt,
       author: req.user.id,
       type: roleType,
-      tags,
+      tags: finalTags,
       coverImage: cover || undefined,
       media,
-    });
-
-    // async tag AI
-    setImmediate(async () => {
-      try {
-        const suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml });
-        if (Array.isArray(suggestions) && suggestions.length) {
-          await Post.findByIdAndUpdate(doc._id, { $addToSet: { tags: { $each: suggestions } } });
-        }
-      } catch {}
+      personaId: persona?._id,
+      personaName: persona?.name || null,
+      personaAvatar: persona?.avatar || null,
     });
 
     res.status(201).json({ post: doc });

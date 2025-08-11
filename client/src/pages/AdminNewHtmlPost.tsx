@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 
@@ -16,11 +16,17 @@ export default function AdminNewHtmlPost() {
   const [coverSuggested, setCoverSuggested] = useState<string | null>(null);
   const [coverOverride, setCoverOverride] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [personaId, setPersonaId] = useState<string | null>(null);
+  const [personas, setPersonas] = useState<any[]>([]);
 
   const canPost = !!user && (['system_admin','admin','verified_publisher','verified_influencer','advertiser'].includes(user.role));
 
   if (!user) return <div className="p-4">Please sign in.</div>;
   if (!canPost) return <div className="p-4">Forbidden</div>;
+
+  useEffect(() => {
+    api.get('/personas?owner=me').then(({ data }) => setPersonas(data.personas || data || []));
+  }, []);
 
   const doPreview = async () => {
     setBusy(true);
@@ -44,6 +50,7 @@ export default function AdminNewHtmlPost() {
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       };
       if (coverOverride) payload.coverImage = coverOverride;
+      if (personaId) payload.personaId = personaId;
 
       const { data } = await api.post('/posts', payload);
       window.location.href = `/p/${data.post.slug}`; // adapt if your route differs
@@ -66,6 +73,20 @@ export default function AdminNewHtmlPost() {
           className="w-full border rounded px-3 py-2"
           placeholder="Enter a title"
         />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm">Posting as</label>
+        <select
+          value={personaId ?? ''}
+          onChange={e => setPersonaId(e.target.value || null)}
+          className="border rounded px-2 py-1"
+        >
+          <option value="">(use default)</option>
+          {personas.map(p => (
+            <option key={p._id} value={p._id}>{p.name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
