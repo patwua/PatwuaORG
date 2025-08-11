@@ -102,11 +102,12 @@ export async function publishPost(id: string) {
   return handle(r) as Promise<Post>
 }
 
-// Optional: example mutation (wire later)
-export async function votePost(
-  id: string,
-  dir: 'up' | 'down'
-): Promise<{ score: number; up: number; down: number; myVote: number }> {
-  const { data } = await api.post(`/posts/${id}/vote`, { dir })
-  return data
-}
+export const votePost = (postId: string, value: -1 | 0 | 1) =>
+  api.post(`/posts/${postId}/vote`, { value }, { withCredentials: true })
+export const getVotes = (postId: string) =>
+  api.get(`/posts/${postId}/votes`, { withCredentials: true })
+export const getComments = (postId: string) => api.get(`/posts/${postId}/comments`)
+export const addComment = (
+  postId: string,
+  payload: { body: string; personaId?: string }
+) => api.post(`/posts/${postId}/comments`, payload, { withCredentials: true })
