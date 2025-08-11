@@ -4,6 +4,7 @@ describe('tag utils', () => {
   test('normalizeTag cleans and filters input', () => {
     expect(normalizeTag('#We Are!')).toBe('we-are');
     expect(normalizeTag('div')).toBeNull();
+    expect(normalizeTag('#ffffff')).toBeNull();
   });
 
   test('normalize removes duplicates and limits', () => {
@@ -16,5 +17,10 @@ describe('tag utils', () => {
     expect(extractHashtagsFromHtml(html)).toEqual(['alpha','beta']);
     const text = 'Hello #Gamma world #delta!';
     expect(extractHashtagsFromText(text)).toEqual(['gamma','delta']);
+  });
+
+  test('ignores css ids and colors in html', () => {
+    const html = '<style>#outlook{color:#ffffff}</style><p>#Hello <span style="color:#000000">world</span></p>';
+    expect(extractHashtagsFromHtml(html)).toEqual(['hello']);
   });
 });
