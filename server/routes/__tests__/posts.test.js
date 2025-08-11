@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 
 const Post = require('../../models/Post');
+const PostDraft = require('../../models/PostDraft');
 const postsRouter = require('../posts');
 
 function sign(user) {
@@ -127,6 +128,35 @@ describe('archive and unarchive routes', () => {
       .send();
     expect(res.status).toBe(200);
     expect(updateSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('draft routes', () => {
+  test('normalizes tags on save', async () => {
+    const postId = new mongoose.Types.ObjectId();
+    const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
+
+    jest
+      .spyOn(Post, 'findById')
+      .mockReturnValue({ lean: () => Promise.resolve({ _id: postId, author: user._id, title: 't' }) });
+    jest.spyOn(PostDraft, 'findOne').mockResolvedValue(null);
+
+    let savedTags;
+    jest.spyOn(PostDraft, 'findOneAndUpdate').mockImplementation((filter, update) => {
+      savedTags = update.$set.tags;
+      return {
+        lean: () =>
+          Promise.resolve({ _id: new mongoose.Types.ObjectId(), rev: update.$set.rev, expiresAt: new Date() }),
+      };
+    });
+
+    const res = await request(app)
+      .put(`/api/posts/${postId}/draft`)
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send({ tags: ['Tag', 'tag', ' style '] });
+
+    expect(res.status).toBe(200);
+    expect(savedTags).toEqual(['tag']);
   });
 });
 
