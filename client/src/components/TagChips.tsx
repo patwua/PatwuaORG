@@ -5,7 +5,7 @@ export default function TagChips({ tags }: { tags?: string[] }) {
   return (
     <div className="flex flex-wrap gap-2">
       {tags.map(tag => (
-        <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`} className="tag-chip">
+        <Link key={tag} to={`/tag/${encodeURIComponent(tag.toLowerCase())}`} className="tag-chip">
           #{tag}
         </Link>
       ))}

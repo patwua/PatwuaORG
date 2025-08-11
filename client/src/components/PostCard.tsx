@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { CheckCheck, ArrowBigUp, ArrowBigDown, MessageSquareText, Bookmark, Share2 } from 'lucide-react'
 import TagChips from './TagChips'
 import type { Post } from '../types/post'
@@ -44,16 +45,24 @@ export default function PostCard({
   return (
     <article className="card card-hover overflow-hidden">
       {post.coverImage && (
-        <div className="aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
+        <Link to={post.slug ? `/p/${post.slug}` : '#'} className="block aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
           <img src={post.coverImage} alt="" className="h-full w-full object-cover" loading="lazy" />
-        </div>
+        </Link>
       )}
       <div className="p-4 md:p-5">
         <div className="flex items-center gap-3 mb-3">
-          <div className="h-9 w-9 rounded-full bg-neutral-200" />
+          {post.persona?.avatar ? (
+            <img
+              src={post.persona.avatar}
+              alt={post.persona?.name ?? post.author?.name ?? 'Avatar'}
+              className="h-9 w-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="h-9 w-9 rounded-full bg-neutral-200" />
+          )}
           <div className="leading-tight">
             <div className="flex items-center gap-1.5 text-sm font-medium">
-              <span>{post.author?.name ?? 'Unknown'}</span>
+              <span>{post.persona?.name ?? post.author?.name ?? 'Unknown'}</span>
               {post.author?.verified && <CheckCheck className="h-4 w-4 text-emerald-500" />}
             </div>
             <div className="text-xs text-neutral-500 flex items-center gap-1">
@@ -74,12 +83,12 @@ export default function PostCard({
           </div>
         </div>
 
-        <a
-          href={post.slug ? `/p/${post.slug}` : '#'}
+        <Link
+          to={post.slug ? `/p/${post.slug}` : '#'}
           className="text-lg md:text-xl font-semibold tracking-tight mb-2 hover:underline"
         >
           {post.title}
-        </a>
+        </Link>
         {(post.summaryAI || post.excerpt) && (
           <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">{post.summaryAI || post.excerpt}</p>
         )}

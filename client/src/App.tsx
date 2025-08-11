@@ -193,7 +193,7 @@ export default function App() {
         />
         <Route path="/p/:slug" element={<PostDetailPage />} />
         <Route path="/u/:slug" element={<ProfilePage />} />
-        <Route path="/tags/:tag" element={<TagPage />} />
+        <Route path="/tag/:tag" element={<TagPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/new-html" element={<AdminNewHtmlPost />} />
       </Routes>

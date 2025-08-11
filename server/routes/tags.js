@@ -11,7 +11,7 @@ router.get('/trending', async (req, res) => {
     const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000)
 
     const tags = await Post.aggregate([
-      { $match: { status: 'published', createdAt: { $gte: since }, tags: { $exists: true, $ne: [] } } },
+      { $match: { status: 'active', createdAt: { $gte: since }, tags: { $exists: true, $ne: [] } } },
       { $unwind: '$tags' },
       { $group: { _id: { $toLower: '$tags' }, count: { $sum: 1 } } },
       { $sort: { count: -1 } },
@@ -24,19 +24,13 @@ router.get('/trending', async (req, res) => {
   }
 })
 
-const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-// GET /api/tags/:tag/posts?limit=
-router.get('/:tag/posts', async (req, res) => {
+// GET /api/tags/:tag?limit=
+router.get('/:tag', async (req, res) => {
   try {
     const limit = Math.max(1, parseInt(req.query.limit, 10) || 50)
-    const tag = String(req.params.tag)
-    const regex = new RegExp(`^${escapeRegex(tag)}$`, 'i')
-
-    const posts = await Post.find({
-      status: 'published',
-      tags: regex
-    })
+    const t = String(req.params.tag).toLowerCase()
+    const posts = await Post.find({ tags: t, status: 'active' })
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()

@@ -24,6 +24,9 @@ const PostSchema = new mongoose.Schema({
   archivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   tags: [{ type: String, index: true }],
   summaryAI: { type: String },
+  personaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Persona' },
+  personaName: { type: String },
+  personaAvatar: { type: String },
 }, { timestamps: true });
 
 // ensure stable slug on first save only

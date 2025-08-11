@@ -30,6 +30,9 @@ export function normalizePost(p: any): Post {
         name: p.authorName ?? p.author?.name ?? 'Unknown',
         verified: !!(p.author?.verified ?? p.authorVerified),
       },
+    ...(p.personaId || p.personaName || p.personaAvatar
+      ? { persona: { _id: p.personaId, name: p.personaName, avatar: p.personaAvatar } }
+      : {}),
     stats: {
       comments: Number(p.stats?.comments ?? p.commentCount ?? p.comments ?? 0),
       votes: Number(p.stats?.votes ?? p.votes ?? p.score ?? 0),
@@ -69,7 +72,7 @@ export async function getPost(id: string): Promise<Post> {
   return handle(r) as Promise<Post>
 }
 
-export const fetchPostBySlug = (slug: string) => api.get(`/posts/slug/${slug}`)
+export const getPostBySlug = (slug: string) => api.get(`/posts/slug/${slug}`)
 
 export const archivePost = (id: string, reason: string) => api.post(`/posts/${id}/archive`, { reason })
 

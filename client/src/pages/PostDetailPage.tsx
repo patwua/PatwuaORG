@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { fetchPostBySlug, unarchivePost } from '../lib/api'
+import { getPostBySlug, unarchivePost } from '../lib/api'
+import TagChips from '../components/TagChips'
 import { useAuth } from '../context/AuthContext'
 import type { Post } from '../types/post'
 import ArchiveModal from '../components/ArchiveModal'
@@ -18,7 +19,7 @@ export default function PostDetailPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const { data } = await fetchPostBySlug(slug)
+        const { data } = await getPostBySlug(slug)
         if (!alive) return
         setPost(data.post)
         document.title = `${data.post.title} • Patwua`
@@ -53,15 +54,21 @@ export default function PostDetailPage() {
       {/* Byline */}
       <header className="flex items-center gap-3">
         <div className="h-12 w-12 rounded-full overflow-hidden bg-neutral-200">
-          {post.persona?.avatar ? <img src={post.persona.avatar} alt={post.persona.name} className="h-full w-full object-cover" /> : null}
+          {(post.persona?.avatar || post.author?.avatar) && (
+            <img
+              src={post.persona?.avatar ?? post.author?.avatar!}
+              alt={post.persona?.name ?? post.author?.name ?? 'Avatar'}
+              className="h-full w-full object-cover"
+            />
+          )}
         </div>
         <div>
           <div className="font-semibold">
-            {post.persona?.name || '—'}
+            {post.persona?.name ?? post.author?.name ?? 'Unknown'}
           </div>
           <div className="text-xs text-neutral-500">
             {created ? created.toLocaleString() : ''}
-            {post.author?.slug && (
+            {post.persona && post.author?.slug && (
               <>
                 {' · via '}
                 <Link className="underline" to={`/u/${post.author.slug}`}>{post.author.name}</Link>
@@ -75,11 +82,7 @@ export default function PostDetailPage() {
       <h1 className="text-2xl md:text-3xl font-bold">{post.title}</h1>
 
       {/* Tags */}
-      {!!post.tags?.length && (
-        <div className="flex flex-wrap gap-2">
-          {post.tags.map(t => <span key={t} className="tag-chip">#{t}</span>)}
-        </div>
-      )}
+      {!!post.tags?.length && <TagChips tags={post.tags} />}
 
       {/* Body */}
       {post.bodyHtml ? (
