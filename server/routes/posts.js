@@ -27,128 +27,114 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-/**
- * PREVIEW — compile MJML, sanitize HTML, extract media, suggest cover.
- * Body: { content: string }
- * Returns: { format, html, media: {images[], videos[]}, coverSuggested }
- */
+// PREVIEW — works with plain text, HTML, MJML
 router.post('/preview', auth(true), async (req, res, next) => {
   try {
-    const { content = '' } = req.body || {};
-    const fmt = detectFormat(content);
+    const { content = '', body = '' } = req.body || {};
+    const raw = content || body || '';
+    const fmt = detectFormat(raw);
 
-    let bodyHtml = '';
-    if (fmt === 'mjml') {
-      const compiled = compileMjml(content);
-      bodyHtml = sanitize(compiled);
-    } else if (fmt === 'html') {
-      bodyHtml = sanitize(content);
-    } else {
-      return res.status(400).json({ error: 'Provide HTML or MJML for preview' });
+    let html = '';
+    if (fmt === 'mjml') html = sanitize(compileMjml(raw));
+    else if (fmt === 'html') html = sanitize(raw);
+    else {
+      const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+      const safe = esc(raw).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br/>');
+      html = `<div class="post-plain"><p>${safe}</p></div>`;
     }
 
-    const m = extractMedia(bodyHtml);
-    const coverSuggested = chooseCover(m);
+    const media = fmt !== 'richtext' ? extractMedia(html) : { images: [], videos: [] };
+    const coverSuggested = fmt !== 'richtext' ? chooseCover(media) : null;
 
-    res.json({
-      format: fmt,
-      html: bodyHtml,
-      media: m,
-      coverSuggested,
-    });
-  } catch (e) {
-    next(e);
-  }
+    res.json({ format: fmt, html, media, coverSuggested });
+  } catch (e) { next(e); }
 });
 
-/**
- * CREATE — single content field; auto-detect format; optional coverImage override
- * Body: { title, content, coverImage? }
- */
+// CREATE — single modal flow (title + body textarea) auto-detects
 router.post('/', auth(true), async (req, res, next) => {
   try {
-    const { title, content = '', coverImage, personaId } = req.body || {};
+    const { title, content = '', body = '', coverImage, personaId } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
 
-    const fmt = detectFormat(content);
-    const roleType = Post.resolveTypeForRole(req.user.role);
-
-    let bodyText = '';
-    let bodyHtml;
-
-    if (fmt === 'mjml') {
-      const compiled = compileMjml(content);
-      bodyHtml = sanitize(compiled);
-      bodyText = stripToText(bodyHtml).slice(0, 800);
-    } else if (fmt === 'html') {
-      bodyHtml = sanitize(content);
-      bodyText = stripToText(bodyHtml).slice(0, 800);
+    // persona: provided → else user's default → else none
+    let persona = null;
+    if (personaId) {
+      persona = await Persona.findOne({ _id: personaId, user: req.user.id }).lean();
+      if (!persona) return res.status(400).json({ error: 'Invalid persona' });
     } else {
-      return res.status(400).json({ error: 'Content must be HTML or MJML' });
+      persona = await Persona.findOne({ user: req.user.id, isDefault: true }).lean();
     }
 
-    // Extract media & choose cover unless overridden
-    let cover = coverImage || null;
+    const raw = content || body || '';
+    const fmt = detectFormat(raw);
+
+    let bodyText = '';
+    let bodyHtml = null;
+
+    if (fmt === 'mjml') {
+      bodyHtml = sanitize(compileMjml(raw));
+      bodyText = stripToText(bodyHtml).slice(0, 800);
+    } else if (fmt === 'html') {
+      bodyHtml = sanitize(raw);
+      bodyText = stripToText(bodyHtml).slice(0, 800);
+    } else { // richtext
+      if (!body) return res.status(400).json({ error: 'Body required' });
+      bodyText = String(body);
+    }
+
+    // media + cover
     let media = [];
+    let cover = coverImage || null;
     if (bodyHtml) {
       const m = extractMedia(bodyHtml);
       media = [
-        ...m.images.map(i => ({ kind: 'image', url: i.url, alt: i.alt, width: i.width, height: i.height })),
-        ...m.videos.map(v => ({ kind: 'video', url: v.url, poster: v.poster })),
+        ...m.images.map(i => ({ kind:'image', url:i.url, alt:i.alt, width:i.width, height:i.height })),
+        ...m.videos.map(v => ({ kind:'video', url:v.url, poster:v.poster })),
       ];
       if (!cover) cover = chooseCover(m);
     }
 
-    // persona (explicit or default)
-    let persona = null;
-    if (personaId) {
-      persona = await Persona.findOne({ _id: personaId, ownerUserId: req.user.id }).lean();
-    } else {
-      persona = await Persona.findOne({ ownerUserId: req.user.id, isDefault: true }).lean();
-    }
-
-    let hashTags = [];
-    if (bodyHtml) hashTags = extractHashtagsFromHtml(bodyHtml);
-    else hashTags = extractHashtagsFromText(bodyText);
-
-    const doc = await Post.create({
+    const type = Post.resolveTypeForRole(req.user.role);
+    let doc = await Post.create({
       title,
       body: bodyText,
       bodyHtml,
+      sourceRaw: bodyHtml ? raw : undefined,
       format: fmt,
       author: req.user.id,
-      type: roleType,
-      tags: hashTags,
+      personaId: persona?._id || undefined,
+      personaName: persona?.name || undefined,
+      personaAvatar: persona?.avatar || undefined,
+      type,
       coverImage: cover || undefined,
-      media,
+      media
     });
 
-    // Replace CTA token with the real post URL
-    if (bodyHtml) {
-      const $ = cheerio.load(bodyHtml);
+    // CTA token replacement: [[POST_URL]]
+    if (doc.bodyHtml) {
+      const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
+      const $ = cheerio.load(doc.bodyHtml);
       $('a[href="[[POST_URL]]"], a[data-cta="join"]').each((_, el) => {
-        const url = `${SITE}/p/${doc.slug}`;
-        $(el).attr('href', url);
-        $(el).attr('target', '_self');
-        $(el).attr('rel', 'noopener');
+        $(el).attr('href', `${SITE}/p/${doc.slug}`).attr('target','_self').attr('rel','noopener');
       });
-      bodyHtml = $.html();
-      await Post.findByIdAndUpdate(doc._id, { bodyHtml });
+      await Post.findByIdAndUpdate(doc._id, { bodyHtml: $.html() });
     }
 
-    // async tag AI
+    // Hashtag tags (+ optional AI) → normalized and saved async
     setImmediate(async () => {
       try {
-        const suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml }) || [];
-        const final = normalize([ ...hashTags, ...suggestions ]);
+        const hashTags = doc.bodyHtml ? extractHashtagsFromHtml(doc.bodyHtml) : extractHashtagsFromText(doc.body || '');
+        let final = hashTags;
+        try {
+          const suggestions = await runTagAI({ title: doc.title, body: doc.body, html: doc.bodyHtml }) || [];
+          final = normalize([ ...hashTags, ...suggestions ]);
+        } catch { /* AI optional */ }
         await Post.findByIdAndUpdate(doc._id, { tags: final });
       } catch {}
     });
 
     res.status(201).json({ post: doc });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 /**

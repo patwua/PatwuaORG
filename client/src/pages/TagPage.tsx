@@ -17,7 +17,7 @@ export default function TagPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const res = await fetch(`${API}/api/tags/${encodeURIComponent(tag)}`, { credentials: 'include' })
+        const res = await fetch(`${API}/api/tags/${encodeURIComponent(tag.toLowerCase())}`, { credentials: 'include' })
         const data = await res.json()
         const list = Array.isArray(data.posts) ? data.posts.map((p: any) => normalizePost(p)) : []
         if (alive) setPosts(list)

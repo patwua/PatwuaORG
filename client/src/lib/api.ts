@@ -8,8 +8,6 @@ export const api = axios.create({
   withCredentials: true,
 })
 
-const token = () => localStorage.getItem('token')
-const headers = () => ({ 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}) })
 
 // Normalize server payloads into our Post shape
 export function normalizePost(p: any): Post {
@@ -81,26 +79,11 @@ export const archivePost = (id: string, reason: string) => api.post(`/posts/${id
 
 export const unarchivePost = (id: string) => api.post(`/posts/${id}/unarchive`)
 
-export async function createPost(payload: { title: string; body: string; tags: string[]; personaId: string; action?: 'publish' | 'submit' }) {
-  const r = await fetch(`${API_BASE}/api/posts`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: headers(),
-    body: JSON.stringify(payload),
-  })
-  const data = await handle(r)
-  return normalizePost(data.post)
-}
+export const previewPost = (payload: { content?: string; body?: string }) =>
+  api.post('/posts/preview', payload, { withCredentials: true })
 
-export async function submitPost(id: string) {
-  const r = await fetch(`${API_BASE}/api/posts/${id}/submit`, { method: 'PATCH', credentials: 'include', headers: headers() })
-  return handle(r) as Promise<Post>
-}
-
-export async function publishPost(id: string) {
-  const r = await fetch(`${API_BASE}/api/posts/${id}/publish`, { method: 'PATCH', credentials: 'include', headers: headers() })
-  return handle(r) as Promise<Post>
-}
+export const createPost = (payload: { title: string; content?: string; body?: string; personaId?: string; coverImage?: string }) =>
+  api.post('/posts', payload, { withCredentials: true })
 
 export const votePost = (postId: string, value: -1 | 0 | 1) =>
   api.post(`/posts/${postId}/vote`, { value }, { withCredentials: true })
