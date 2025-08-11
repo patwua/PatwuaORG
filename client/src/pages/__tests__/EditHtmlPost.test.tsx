@@ -10,6 +10,8 @@ vi.mock('@/lib/api', () => ({
     get: vi.fn(),
     post: vi.fn(),
     patch: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -124,6 +126,42 @@ describe('EditHtmlPost', () => {
     expect((screen.getByPlaceholderText('Paste/edit your HTML or MJML here') as HTMLTextAreaElement).value).toBe('<p>New</p>');
     expect((screen.getByPlaceholderText('e.g. welcome, platform, patwua') as HTMLInputElement).value).toBe('tag1, tag2');
     expect(screen.getByText((_, el) => el?.textContent === 'Current: img1.jpg')).toBeTruthy();
+  });
+
+  it('saves cloud drafts to server', async () => {
+    const post = {
+      _id: '1',
+      slug: 'test-post',
+      title: 'Original',
+      author: { _id: 'u1' },
+    };
+
+    // first call to load post, subsequent get calls return empty
+    (api.get as any)
+      .mockResolvedValueOnce({ data: { post } })
+      .mockResolvedValue({ data: {} });
+    (api.put as any).mockResolvedValue({ data: { draft: { id: 'd1', rev: 1, expiresAt: new Date().toISOString() } } });
+
+    mockUser = { id: 'u1', role: 'member' };
+
+    renderPage();
+    await screen.findByText('Edit Post');
+
+    fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Cloud Title' } });
+    fireEvent.change(screen.getByPlaceholderText('Paste/edit your HTML or MJML here'), { target: { value: '<p>Cloud</p>' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g. welcome, platform, patwua'), { target: { value: 'cloud' } });
+
+    fireEvent.click(screen.getByText('Save cloud draft'));
+
+    await waitFor(() => expect(api.put).toHaveBeenCalled());
+    expect(api.put).toHaveBeenCalledWith('/posts/1/draft', {
+      title: 'Cloud Title',
+      content: '<p>Cloud</p>',
+      tags: ['cloud'],
+      coverImage: null,
+      rev: undefined,
+    }, { withCredentials: true });
+    expect(screen.getByText(/Cloud draft saved/)).toBeTruthy();
   });
 
   it('publishes changes and navigates to post detail', async () => {

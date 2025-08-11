@@ -1,12 +1,19 @@
 const express = require('express');
 const Post = require('../models/Post');
 const Persona = require('../models/Persona');
+const PostDraft = require('../models/PostDraft');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
+const { normalize } = require('../utils/tags');
 const cheerio = require('cheerio');
 const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
 const router = express.Router();
+
+function ttlDate() {
+  const hours = Number(process.env.DRAFT_TTL_HOURS || 72);
+  return new Date(Date.now() + hours * 3600 * 1000);
+}
 
 // List posts
 router.get('/', async (req, res, next) => {
@@ -154,6 +161,140 @@ router.get('/slug/:slug', auth(false), async (req, res, next) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug }).populate('author', 'name email role').lean();
     if (!post) return res.status(404).json({ error: 'Not found' });
+    res.json({ post });
+  } catch (e) { next(e); }
+});
+
+// Save/replace a draft for an existing post
+router.put('/:id/draft', auth(true), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const post = await Post.findById(id).lean();
+    if (!post) return res.status(404).json({ error: 'Not found' });
+
+    const canEdit = String(post.author) === String(req.user.id) || ['system_admin','admin'].includes(req.user.role);
+    if (!canEdit) return res.status(403).json({ error: 'Forbidden' });
+
+    const { title, content, tags = [], coverImage, personaId, rev } = req.body || {};
+    if (!content && !title && !tags && coverImage === undefined && !personaId) {
+      return res.status(400).json({ error: 'Nothing to save' });
+    }
+
+    // Optional optimistic concurrency: if client passed rev, ensure match
+    const existing = await PostDraft.findOne({ user: req.user.id, post: id });
+    if (existing && rev && existing.rev !== rev) {
+      return res.status(409).json({ error: 'Draft has changed elsewhere', currentRev: existing.rev });
+    }
+
+    // Validate persona ownership (if provided)
+    let persona = null;
+    if (personaId) {
+      persona = await Persona.findOne({ _id: personaId, user: req.user.id }).lean();
+      if (!persona) return res.status(400).json({ error: 'Invalid persona' });
+    }
+
+    const nextRev = (existing?.rev || 0) + 1;
+    const draft = await PostDraft.findOneAndUpdate(
+      { user: req.user.id, post: id },
+      {
+        $set: {
+          title: title ?? existing?.title ?? post.title,
+          content: content ?? existing?.content ?? '',
+          tags: normalize(Array.isArray(tags) ? tags : existing?.tags ?? []),
+          coverImage: coverImage !== undefined ? coverImage : (existing?.coverImage ?? post.coverImage ?? null),
+          personaId: persona?._id ?? existing?.personaId ?? post.personaId ?? null,
+          updatedAt: new Date(),
+          expiresAt: ttlDate(),
+          rev: nextRev,
+        }
+      },
+      { upsert: true, new: true }
+    ).lean();
+
+    return res.json({ draft: { id: draft._id, rev: draft.rev, expiresAt: draft.expiresAt } });
+  } catch (e) { next(e); }
+});
+
+// Get a draft for this post (if exists)
+router.get('/:id/draft', auth(true), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const draft = await PostDraft.findOne({ user: req.user.id, post: id }).lean();
+    if (!draft) return res.status(404).json({ error: 'No draft' });
+    res.json({ draft });
+  } catch (e) { next(e); }
+});
+
+// Discard draft
+router.delete('/:id/draft', auth(true), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await PostDraft.deleteOne({ user: req.user.id, post: id });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// Publish draft: apply to live post and delete draft
+router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let draft = await PostDraft.findOne({ user: req.user.id, post: id });
+    if (!draft) return res.status(404).json({ error: 'No draft' });
+
+    const post = await Post.findById(id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    const canEdit = String(post.author) === String(req.user.id) || ['system_admin','admin'].includes(req.user.role);
+    if (!canEdit) return res.status(403).json({ error: 'Forbidden' });
+
+    // Title
+    if (draft.title) post.title = draft.title;
+
+    // Persona (optional)
+    if (draft.personaId) post.personaId = draft.personaId;
+
+    // Content (compile/sanitize)
+    if (draft.content) {
+      const fmt = detectFormat(draft.content);
+      if (fmt === 'mjml') {
+        const compiled = compileMjml(draft.content);
+        post.bodyHtml = sanitize(compiled);
+        post.body = stripToText(post.bodyHtml).slice(0, 800);
+        post.format = 'mjml';
+        post.sourceRaw = draft.content;
+      } else if (fmt === 'html') {
+        post.bodyHtml = sanitize(draft.content);
+        post.body = stripToText(post.bodyHtml).slice(0, 800);
+        post.format = 'html';
+        post.sourceRaw = draft.content;
+      } else {
+        return res.status(400).json({ error: 'Draft must be HTML or MJML' });
+      }
+
+      // media + cover (unless override)
+      const m = extractMedia(post.bodyHtml);
+      post.media = [
+        ...m.images.map(i => ({ kind:'image', url:i.url, alt:i.alt, width:i.width, height:i.height })),
+        ...m.videos.map(v => ({ kind:'video', url:v.url, poster:v.poster })),
+      ];
+      if (!draft.coverImage) {
+        post.coverImage = chooseCover(m) || undefined;
+      }
+    }
+
+    // cover override
+    if (draft.coverImage !== undefined) post.coverImage = draft.coverImage || undefined;
+
+    // tags
+    if (draft.tags) post.tags = normalize(draft.tags);
+
+    post.editedAt = new Date();
+    post.editedBy = req.user.id;
+    await post.save();
+
+    // Cleanup draft
+    await PostDraft.deleteOne({ _id: draft._id });
+
     res.json({ post });
   } catch (e) { next(e); }
 });

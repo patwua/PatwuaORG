@@ -48,6 +48,8 @@ export default function EditHtmlPost() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
+  const [cloud, setCloud] = useState<{ id?: string; rev?: number; expiresAt?: string } | null>(null);
+  const [cloudMsg, setCloudMsg] = useState<string | null>(null);
 
   const canEdit = useMemo(() => {
     if (!user || !post) return false;
@@ -87,6 +89,20 @@ export default function EditHtmlPost() {
     })();
     return () => { mounted = false; };
   }, [slug]);
+
+  // after post is loaded, try to fetch a cloud draft
+  useEffect(() => {
+    (async () => {
+      if (!post) return;
+      try {
+        const { data } = await api.get(`/posts/${post._id}/draft`, { withCredentials: true });
+        if (data?.draft) {
+          setCloud({ id: data.draft._id, rev: data.draft.rev, expiresAt: data.draft.expiresAt });
+          setCloudMsg('Found a cloud draft. You can restore it by clicking Restore cloud draft.');
+        }
+      } catch {}
+    })();
+  }, [post]);
 
   // Preview
   const doPreview = async () => {
@@ -136,6 +152,67 @@ export default function EditHtmlPost() {
     if (!post) return;
     localStorage.removeItem(draftKey(post._id));
     setDraftNotice('Local draft discarded.');
+  };
+
+  // Restore cloud draft into the editor
+  const restoreCloudDraft = async () => {
+    if (!post) return;
+    try {
+      const { data } = await api.get(`/posts/${post._id}/draft`, { withCredentials: true });
+      const d = data.draft;
+      if (d?.title) setTitle(d.title);
+      if (d?.content) setContent(d.content);
+      if (d?.tags) setTags((d.tags as string[]).join(', '));
+      if (d?.coverImage !== undefined) setCoverOverride(d.coverImage);
+      setCloud({ id: d._id, rev: d.rev, expiresAt: d.expiresAt });
+      setCloudMsg('Cloud draft restored.');
+    } catch (e) { setCloudMsg('Could not restore cloud draft.'); }
+  };
+
+  // Save to cloud (upsert)
+  const saveCloudDraft = async () => {
+    if (!post) return;
+    setBusy(true); setCloudMsg(null);
+    try {
+      const payload: any = {
+        title, content, tags: parseTags(tags),
+        coverImage: coverOverride,
+        rev: cloud?.rev,
+      };
+      const { data } = await api.put(`/posts/${post._id}/draft`, payload, { withCredentials: true });
+      setCloud({ id: data.draft.id, rev: data.draft.rev, expiresAt: data.draft.expiresAt });
+      setCloudMsg(`Cloud draft saved. Expires ${new Date(data.draft.expiresAt).toLocaleString()}.`);
+    } catch (e:any) {
+      if (e?.response?.status === 409) {
+        setCloudMsg('Draft changed elsewhere. Click “Restore cloud draft” to sync, then save again.');
+      } else {
+        setCloudMsg('Saving cloud draft failed.');
+      }
+    } finally { setBusy(false); }
+  };
+
+  // Discard cloud
+  const discardCloudDraft = async () => {
+    if (!post) return;
+    try {
+      await api.delete(`/posts/${post._id}/draft`, { withCredentials: true });
+      setCloud(null);
+      setCloudMsg('Cloud draft discarded.');
+    } catch { setCloudMsg('Could not discard cloud draft.'); }
+  };
+
+  // Publish cloud draft
+  const publishCloudDraft = async () => {
+    if (!post) return;
+    setBusy(true); setCloudMsg(null);
+    try {
+      await api.post(`/posts/${post._id}/draft/publish`, {}, { withCredentials: true });
+      localStorage.removeItem(draftKey(post._id));
+      setCloud(null);
+      navigate(`/p/${post.slug}`, { replace: true });
+    } catch (e) {
+      setCloudMsg('Publish failed.');
+    } finally { setBusy(false); }
   };
 
   // Publish changes
@@ -251,6 +328,16 @@ export default function EditHtmlPost() {
         >
           Discard local draft
         </button>
+      </div>
+
+      {/* Cloud draft controls */}
+      {cloudMsg && <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">{cloudMsg}</div>}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={saveCloudDraft} disabled={busy} className="px-3 py-2 border rounded">Save cloud draft</button>
+        <button onClick={restoreCloudDraft} disabled={busy} className="px-3 py-2 border rounded">Restore cloud draft</button>
+        <button onClick={discardCloudDraft} disabled={busy} className="px-3 py-2 border rounded">Discard cloud draft</button>
+        <button onClick={publishCloudDraft} disabled={busy} className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-60">Publish cloud draft</button>
       </div>
 
       {/* Cover picker */}
