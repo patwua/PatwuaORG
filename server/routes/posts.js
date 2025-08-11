@@ -5,7 +5,7 @@ const PostDraft = require('../models/PostDraft');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
-const { normalize } = require('../utils/tags');
+const { normalize, extractHashtagsFromHtml, extractHashtagsFromText } = require('../utils/tags');
 const cheerio = require('cheerio');
 const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
 const router = express.Router();
@@ -60,11 +60,11 @@ router.post('/preview', auth(true), async (req, res, next) => {
 
 /**
  * CREATE — single content field; auto-detect format; optional coverImage override
- * Body: { title, content, tags?, coverImage? }
+ * Body: { title, content, coverImage? }
  */
 router.post('/', auth(true), async (req, res, next) => {
   try {
-    const { title, content = '', tags = [], coverImage, personaId } = req.body || {};
+    const { title, content = '', coverImage, personaId } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
 
     const fmt = detectFormat(content);
@@ -104,14 +104,9 @@ router.post('/', auth(true), async (req, res, next) => {
       persona = await Persona.findOne({ ownerUserId: req.user.id, isDefault: true }).lean();
     }
 
-    // tags (user + AI suggestions)
-    let suggestions = [];
-    try {
-      suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml });
-    } catch {}
-    const userTags = Array.isArray(tags) ? tags : [];
-    const aiTags = Array.isArray(suggestions) ? suggestions : [];
-    const finalTags = normalize([...userTags, ...aiTags]);
+    let hashTags = [];
+    if (bodyHtml) hashTags = extractHashtagsFromHtml(bodyHtml);
+    else hashTags = extractHashtagsFromText(bodyText);
 
     const doc = await Post.create({
       title,
@@ -120,7 +115,7 @@ router.post('/', auth(true), async (req, res, next) => {
       format: fmt,
       author: req.user.id,
       type: roleType,
-      tags: finalTags,
+      tags: hashTags,
       coverImage: cover || undefined,
       media,
     });
@@ -141,10 +136,9 @@ router.post('/', auth(true), async (req, res, next) => {
     // async tag AI
     setImmediate(async () => {
       try {
-        const suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml });
-        if (Array.isArray(suggestions) && suggestions.length) {
-          await Post.findByIdAndUpdate(doc._id, { $addToSet: { tags: { $each: suggestions } } });
-        }
+        const suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml }) || [];
+        const final = normalize([ ...hashTags, ...suggestions ]);
+        await Post.findByIdAndUpdate(doc._id, { tags: final });
       } catch {}
     });
 
@@ -285,12 +279,20 @@ router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
     // cover override
     if (draft.coverImage !== undefined) post.coverImage = draft.coverImage || undefined;
 
-    // tags
-    if (draft.tags) post.tags = normalize(draft.tags);
+    const hashTags = post.bodyHtml ? extractHashtagsFromHtml(post.bodyHtml) : extractHashtagsFromText(post.body);
+    post.tags = hashTags;
 
     post.editedAt = new Date();
     post.editedBy = req.user.id;
     await post.save();
+
+    setImmediate(async () => {
+      try {
+        const suggestions = await runTagAI({ title: post.title, body: post.body, html: post.bodyHtml }) || [];
+        const final = normalize([...hashTags, ...suggestions]);
+        await Post.findByIdAndUpdate(post._id, { tags: final });
+      } catch {}
+    });
 
     // Cleanup draft
     await PostDraft.deleteOne({ _id: draft._id });

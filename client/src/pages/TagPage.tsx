@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import PostCard from '../components/PostCard'
-import { getPostsByTag } from '../lib/tags'
-import { votePost } from '../lib/api'
+import { votePost, normalizePost } from '../lib/api'
 import type { Post } from '../types/post'
+
+const API = import.meta.env.VITE_API_BASE || ''
 
 export default function TagPage() {
   const { tag = '' } = useParams()
@@ -16,8 +17,10 @@ export default function TagPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const data = await getPostsByTag(tag)
-        if (alive) setPosts(data)
+        const res = await fetch(`${API}/api/tags/${encodeURIComponent(tag)}`, { credentials: 'include' })
+        const data = await res.json()
+        const list = Array.isArray(data.posts) ? data.posts.map((p: any) => normalizePost(p)) : []
+        if (alive) setPosts(list)
       } catch (e: any) {
         if (alive) setError(e?.message || 'Failed to load posts')
       } finally {
