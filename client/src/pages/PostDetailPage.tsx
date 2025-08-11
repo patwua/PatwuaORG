@@ -39,6 +39,7 @@ export default function PostDetailPage() {
   const idOr = (post as any)._id || post.id
   const canArchive = ['moderator','admin','system_admin'].includes(user?.role || '') && post.status !== 'archived'
   const canUnarchive = post.status === 'archived' && (user?.role === 'system_admin' || [post.author?._id, post.author?.id].includes(user?.id))
+  const canEdit = user && ([post.author?._id, post.author?.id].includes(user.id) || ['system_admin','admin'].includes(user.role))
 
   async function handleUnarchive() {
     try {
@@ -79,7 +80,12 @@ export default function PostDetailPage() {
       </header>
 
       {/* Title */}
-      <h1 className="text-2xl md:text-3xl font-bold">{post.title}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl md:text-3xl font-bold">{post.title}</h1>
+        {canEdit && (
+          <Link to={`/p/${post.slug}/edit`} className="text-sm px-3 py-1 rounded bg-gray-200">Edit</Link>
+        )}
+      </div>
 
       {/* Tags */}
       {!!post.tags?.length && <TagChips tags={post.tags} />}
