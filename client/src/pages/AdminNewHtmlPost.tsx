@@ -18,7 +18,6 @@ export default function AdminNewHtmlPost() {
   const [busy, setBusy] = useState(false);
   const [personaId, setPersonaId] = useState<string | null>(null);
   const [personas, setPersonas] = useState<any[]>([]);
-
   const canPost = !!user && (['system_admin','admin','verified_publisher','verified_influencer','advertiser'].includes(user.role));
 
   if (!user) return <div className="p-4">Please sign in.</div>;
@@ -29,13 +28,15 @@ export default function AdminNewHtmlPost() {
   }, []);
 
   const doPreview = async () => {
-    setBusy(true);
+    setBusy(true); setError(null);
     try {
       const { data } = await api.post('/posts/preview', { content });
       setPreviewHtml(data.html);
       setImages(data.media?.images || []);
       setVideos(data.media?.videos || []);
       setCoverSuggested(data.coverSuggested || null);
+    } catch (e: any) {
+      setError(e?.response?.data?.error || 'Preview failed');
     } finally {
       setBusy(false);
     }
@@ -116,6 +117,7 @@ export default function AdminNewHtmlPost() {
           {busy ? 'Publishing…' : 'Publish'}
         </button>
       </div>
+      {error && <div className="text-sm text-red-600">{error}</div>}
 
       {/* Cover picker */}
       {(images.length > 0 || videos.length > 0) && (

@@ -4,8 +4,8 @@ const Persona = require('../models/Persona');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
-const { normalize } = require('../utils/tags');
-
+const cheerio = require('cheerio');
+const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
 const router = express.Router();
 
 // List posts
@@ -116,9 +116,29 @@ router.post('/', auth(true), async (req, res, next) => {
       tags: finalTags,
       coverImage: cover || undefined,
       media,
-      personaId: persona?._id,
-      personaName: persona?.name || null,
-      personaAvatar: persona?.avatar || null,
+    });
+
+    // Replace CTA token with the real post URL
+    if (bodyHtml) {
+      const $ = cheerio.load(bodyHtml);
+      $('a[href="[[POST_URL]]"], a[data-cta="join"]').each((_, el) => {
+        const url = `${SITE}/p/${doc.slug}`;
+        $(el).attr('href', url);
+        $(el).attr('target', '_self');
+        $(el).attr('rel', 'noopener');
+      });
+      bodyHtml = $.html();
+      await Post.findByIdAndUpdate(doc._id, { bodyHtml });
+    }
+
+    // async tag AI
+    setImmediate(async () => {
+      try {
+        const suggestions = await runTagAI({ title, body: bodyText, html: bodyHtml });
+        if (Array.isArray(suggestions) && suggestions.length) {
+          await Post.findByIdAndUpdate(doc._id, { $addToSet: { tags: { $each: suggestions } } });
+        }
+      } catch {}
     });
 
     res.status(201).json({ post: doc });
