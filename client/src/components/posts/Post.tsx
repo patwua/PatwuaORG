@@ -9,13 +9,8 @@ export default function Post({ post }: { post: PostType }) {
     <article className="post-card mb-6">
       <PostHeader author={post.author} timestamp={post.timestamp} />
       <PostContent post={post as any} />
-      <PostActions
-        stats={post.stats}
-        postId={post.id}
-        isLiked={post.isLiked}
-        isBookmarked={post.isBookmarked}
-      />
-      <PostComments comments={post.comments} postId={post.id} />
+      <PostActions post={post as any} />
+      <PostComments post={post as any} />
     </article>
   );
 }

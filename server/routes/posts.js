@@ -2,11 +2,14 @@ const express = require('express');
 const Post = require('../models/Post');
 const Persona = require('../models/Persona');
 const PostDraft = require('../models/PostDraft');
+const Vote = require('../models/Vote');
+const Comment = require('../models/Comment');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
 const { normalize, extractHashtagsFromHtml, extractHashtagsFromText } = require('../utils/tags');
 const cheerio = require('cheerio');
+const mongoose = require('mongoose');
 const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
 const router = express.Router();
 
@@ -157,6 +160,107 @@ router.get('/slug/:slug', auth(false), async (req, res, next) => {
     if (!post) return res.status(404).json({ error: 'Not found' });
     res.json({ post });
   } catch (e) { next(e); }
+});
+
+// Upsert vote
+router.post('/:id/vote', auth(true), async (req, res, next) => {
+  try {
+    const { value } = req.body || {}; // -1, 0, 1
+    if (![-1, 0, 1].includes(value)) return res.status(400).json({ error: 'Invalid vote' });
+    const postId = req.params.id;
+
+    await Vote.updateOne(
+      { post: postId, user: req.user.id },
+      { $set: { value } },
+      { upsert: true }
+    );
+
+    const agg = await Vote.aggregate([
+      { $match: { post: new mongoose.Types.ObjectId(postId) } },
+      {
+        $group: {
+          _id: '$post',
+          score: { $sum: '$value' },
+          up: { $sum: { $cond: [{ $eq: ['$value', 1] }, 1, 0] } },
+          down: { $sum: { $cond: [{ $eq: ['$value', -1] }, 1, 0] } },
+        },
+      },
+    ]);
+    const { score = 0, up = 0, down = 0 } = agg[0] || {};
+
+    const mine = await Vote.findOne({ post: postId, user: req.user.id }).lean();
+    res.json({ score, up, down, myVote: mine?.value ?? 0 });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// (optional) Get current tallies
+router.get('/:id/votes', auth(false), async (req, res, next) => {
+  try {
+    const postId = req.params.id;
+    const agg = await Vote.aggregate([
+      { $match: { post: new mongoose.Types.ObjectId(postId) } },
+      {
+        $group: {
+          _id: '$post',
+          score: { $sum: '$value' },
+          up: { $sum: { $cond: [{ $eq: ['$value', 1] }, 1, 0] } },
+          down: { $sum: { $cond: [{ $eq: ['$value', -1] }, 1, 0] } },
+        },
+      },
+    ]);
+    const { score = 0, up = 0, down = 0 } = agg[0] || {};
+    let myVote = 0;
+    if (req.user) {
+      const mine = await Vote.findOne({ post: postId, user: req.user.id }).lean();
+      myVote = mine?.value ?? 0;
+    }
+    res.json({ score, up, down, myVote });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// list comments
+router.get('/:id/comments', auth(false), async (req, res, next) => {
+  try {
+    const comments = await Comment.find({ post: req.params.id, status: 'visible' })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ comments });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// add comment
+router.post('/:id/comments', auth(true), async (req, res, next) => {
+  try {
+    const { body, personaId } = req.body || {};
+    if (!body || !String(body).trim()) return res.status(400).json({ error: 'Comment required' });
+
+    let persona = null;
+    if (personaId) {
+      persona = await Persona.findOne({ _id: personaId, user: req.user.id }).lean();
+      if (!persona) return res.status(400).json({ error: 'Invalid persona' });
+    } else {
+      persona = await Persona.findOne({ user: req.user.id, isDefault: true }).lean();
+    }
+
+    const c = await Comment.create({
+      post: req.params.id,
+      user: req.user.id,
+      personaId: persona?._id,
+      personaName: persona?.name,
+      personaAvatar: persona?.avatar,
+      body: String(body).trim(),
+    });
+
+    res.status(201).json({ comment: c });
+  } catch (e) {
+    next(e);
+  }
 });
 
 // Save/replace a draft for an existing post

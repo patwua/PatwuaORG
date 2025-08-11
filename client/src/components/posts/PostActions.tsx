@@ -1,85 +1,65 @@
 'use client';
 
-import { HeartIcon, ChatBubbleIcon, BookmarkIcon, ShareIcon } from '@radix-ui/react-icons';
-import { usePostActions } from '@/hooks/usePostActions';
-import type { PostType } from '@/types/post';
+import { useEffect, useState } from 'react';
+import { ArrowUpIcon, ArrowDownIcon, ChatBubbleIcon } from '@radix-ui/react-icons';
+import { useNavigate } from 'react-router-dom';
+import { votePost, getVotes } from '@/lib/api';
+import type { Post } from '@/types/post';
 
-type Handlers = {
-  onLike?: (postId: string) => Promise<void>;
-  onBookmark?: (postId: string) => Promise<void>;
-};
+export default function PostActions({ post }: { post: Post }) {
+  const [score, setScore] = useState(post.stats?.votes ?? post.score ?? 0);
+  const [myVote, setMyVote] = useState(post.stats?.myVote ?? 0);
+  const navigate = useNavigate();
 
-export default function PostActions({
-  stats,
-  postId,
-  isLiked = false,
-  isBookmarked = false,
-  handlers,
-}: {
-  stats: PostType['stats'];
-  postId: string;
-  isLiked?: boolean;
-  isBookmarked?: boolean;
-  handlers?: Handlers;
-}) {
-  const { post, isLoading, toggleLike, toggleBookmark } = usePostActions(
-    {
-      id: postId,
-      stats,
-      isLiked,
-      isBookmarked,
-    },
-    handlers
-  );
+  useEffect(() => {
+    const id = (post as any)._id || post.id;
+    if (!id) return;
+    getVotes(id).then(({ data }) => {
+      setScore(data.score);
+      setMyVote(data.myVote);
+    }).catch(() => {});
+  }, [post]);
 
-  const handleShare = async () => {
+  async function handleVote(next: -1 | 0 | 1) {
+    const prev = myVote;
+    const optimistic = score - prev + next;
+    setMyVote(next);
+    setScore(optimistic);
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Check out this post on Patwua',
-          url: `${window.location.origin}/post/${postId}`,
-        });
-      } else {
-        await navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
-        alert('Link copied to clipboard!');
-      }
-    } catch (err) {
-      console.error('Error sharing:', err);
+      const id = (post as any)._id || post.id;
+      const { data } = await votePost(id, next);
+      setScore(data.score);
+      setMyVote(data.myVote);
+    } catch {
+      setMyVote(prev);
+      setScore(score);
     }
-  };
+  }
 
   return (
     <div className="px-4 py-2 flex justify-between items-center border-t border-gray-200 dark:border-gray-700">
-      <div className="flex gap-1">
+      <div className="flex items-center gap-2">
         <button
-          onClick={toggleLike}
-          disabled={isLoading}
-          className={`post-action-btn ${post.isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} ${isLoading ? 'opacity-50' : ''}`}
+          onClick={() => handleVote(myVote === 1 ? 0 : 1)}
+          className={`post-action-btn ${myVote === 1 ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'}`}
         >
-          <HeartIcon className="w-5 h-5" fill={post.isLiked ? 'currentColor' : 'none'} />
-          <span className="ml-1 text-sm">{post.stats.likes}</span>
+          <ArrowUpIcon className="w-5 h-5" />
         </button>
-        <button className="post-action-btn text-gray-500 dark:text-gray-400">
-          <ChatBubbleIcon className="w-5 h-5" />
-          <span className="ml-1 text-sm">{post.stats.comments}</span>
+        <span className="text-sm">{score}</span>
+        <button
+          onClick={() => handleVote(myVote === -1 ? 0 : -1)}
+          className={`post-action-btn ${myVote === -1 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
+        >
+          <ArrowDownIcon className="w-5 h-5" />
         </button>
       </div>
-      <div className="flex gap-1">
-        <button
-          onClick={toggleBookmark}
-          disabled={isLoading}
-          className={`post-action-btn ${post.isBookmarked ? 'text-yellow-500' : 'text-gray-500 dark:text-gray-400'} ${isLoading ? 'opacity-50' : ''}`}
-        >
-          <BookmarkIcon className="w-5 h-5" fill={post.isBookmarked ? 'currentColor' : 'none'} />
-        </button>
-        <button
-          onClick={handleShare}
-          className="post-action-btn text-gray-500 dark:text-gray-400"
-        >
-          <ShareIcon className="w-5 h-5" />
-        </button>
-      </div>
+      <button
+        onClick={() => navigate(`/p/${post.slug}#comments`)}
+        className="post-action-btn text-gray-500 dark:text-gray-400"
+      >
+        <ChatBubbleIcon className="w-5 h-5" />
+        <span className="ml-1 text-sm">{post.stats?.comments ?? 0}</span>
+      </button>
     </div>
   );
 }
-
