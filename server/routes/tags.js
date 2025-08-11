@@ -1,5 +1,6 @@
 const express = require('express')
 const Post = require('../models/Post')
+const { normalizeTag } = require('../utils/tags')
 
 const router = express.Router()
 
@@ -26,19 +27,18 @@ router.get('/trending', async (req, res) => {
 
 
 // GET /api/tags/:tag?limit=
-router.get('/:tag', async (req, res) => {
+router.get('/:tag', async (req, res, next) => {
   try {
     const limit = Math.max(1, parseInt(req.query.limit, 10) || 50)
-    const t = String(req.params.tag).toLowerCase()
-    const posts = await Post.find({ tags: t, status: 'active' })
+    const t = normalizeTag(req.params.tag)
+    if (!t) return res.json({ tag: t, posts: [] })
+    const posts = await Post.find({ status: 'active', tags: t })
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()
 
-    res.json(posts)
-  } catch {
-    res.status(500).json({ error: 'Failed to load posts for tag' })
-  }
+    res.json({ tag: t, posts })
+  } catch (e) { next(e) }
 })
 
 module.exports = router

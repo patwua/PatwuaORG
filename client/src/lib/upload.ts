@@ -26,6 +26,19 @@ export async function uploadImage(file: File, folder = 'patwua/avatars'): Promis
   return data.secure_url as string
 }
 
+export async function uploadToCloudinary(file: File, folder = 'patwua/posts'): Promise<string> {
+  if (!CLOUD || !PRESET) throw new Error('Cloudinary env not set')
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('upload_preset', PRESET)
+  fd.append('folder', folder)
+  const type = file.type.startsWith('video/') ? 'video' : 'image'
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/${type}/upload`, { method: 'POST', body: fd })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error?.message || 'Upload failed')
+  return data.secure_url as string
+}
+
 export function avatarUrl(url: string, size = 128) {
   // turn: https://res.cloudinary.com/<cloud>/image/upload/v.../file.jpg
   // into: https://res.cloudinary.com/<cloud>/image/upload/c_fill,g_face,r_max,w_128,h_128,q_auto,f_auto/<rest>

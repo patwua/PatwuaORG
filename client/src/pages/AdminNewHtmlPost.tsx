@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
+import { uploadToCloudinary } from '@/lib/upload';
 import { useAuth } from '@/context/AuthContext';
 
 type MediaImage = { url?: string; alt?: string; width?: number | null; height?: number | null };
@@ -9,15 +10,17 @@ export default function AdminNewHtmlPost() {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState(''); // HTML or MJML
-  const [tags, setTags] = useState('');
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [images, setImages] = useState<MediaImage[]>([]);
   const [videos, setVideos] = useState<MediaVideo[]>([]);
   const [coverSuggested, setCoverSuggested] = useState<string | null>(null);
   const [coverOverride, setCoverOverride] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [personaId, setPersonaId] = useState<string | null>(null);
   const [personas, setPersonas] = useState<any[]>([]);
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const [colorOpen, setColorOpen] = useState(false);
   const canPost = !!user && (['system_admin','admin','verified_publisher','verified_influencer','advertiser'].includes(user.role));
 
   if (!user) return <div className="p-4">Please sign in.</div>;
@@ -26,6 +29,41 @@ export default function AdminNewHtmlPost() {
   useEffect(() => {
     api.get('/personas?owner=me').then(({ data }) => setPersonas(data.personas || data || []));
   }, []);
+
+  function insertAround(tagOpen: string, tagClose: string) {
+    const el = bodyRef.current!;
+    const { selectionStart, selectionEnd, value } = el;
+    const before = value.slice(0, selectionStart);
+    const sel = value.slice(selectionStart, selectionEnd);
+    const after = value.slice(selectionEnd);
+    const next = `${before}${tagOpen}${sel}${tagClose}${after}`;
+    setContent(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = selectionStart + tagOpen.length + sel.length + tagClose.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadToCloudinary(file);
+    const isVideo = /^video\//.test(file.type);
+    const snippet = isVideo
+      ? `<video src="${url}" controls poster="" style="max-width:100%;height:auto"></video>`
+      : `<img src="${url}" alt="" style="max-width:100%;height:auto" />`;
+    const el = bodyRef.current!;
+    const { selectionStart, selectionEnd, value } = el;
+    const next = value.slice(0, selectionStart) + snippet + value.slice(selectionEnd);
+    setContent(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = selectionStart + snippet.length;
+      el.setSelectionRange(pos, pos);
+    });
+    e.target.value = '';
+  }
 
   const doPreview = async () => {
     setBusy(true); setError(null);
@@ -48,7 +86,6 @@ export default function AdminNewHtmlPost() {
       const payload: any = {
         title,
         content,
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       };
       if (coverOverride) payload.coverImage = coverOverride;
       if (personaId) payload.personaId = personaId;
@@ -93,12 +130,38 @@ export default function AdminNewHtmlPost() {
       <div className="space-y-2">
         <label className="block text-sm">Content (HTML or MJML)</label>
         <textarea
+          ref={bodyRef}
           value={content}
           onChange={e=>setContent(e.target.value)}
           rows={16}
           className="w-full border rounded px-3 py-2 font-mono"
-          placeholder="Paste your HTML or MJML here"
+          placeholder="Write plain text, HTML, or MJML. Use #hashtags to tag your post."
         />
+      </div>
+
+      <div className="flex items-center gap-2 text-sm">
+        <button className="px-2 py-1 border rounded" onClick={() => insertAround('<strong>', '</strong>')}>B</button>
+        <button className="px-2 py-1 border rounded italic" onClick={() => insertAround('<em>', '</em>')}>I</button>
+        <button className="px-2 py-1 border rounded underline" onClick={() => insertAround('<u>', '</u>')}>U</button>
+
+        <div className="relative">
+          <button className="px-2 py-1 border rounded" onClick={() => setColorOpen(v => !v)}>Text color</button>
+          {colorOpen && (
+            <div className="absolute z-10 mt-1 grid grid-cols-8 gap-1 bg-white p-2 rounded border">
+              {['#D92D2D','#111827','#2563eb','#059669','#f59e0b','#7c3aed','#ef4444','#10b981'].map(c => (
+                <button key={c} className="h-5 w-5 rounded border" style={{ background: c }}
+                  onClick={() => { insertAround(`<span style="color:${c}">`, '</span>'); setColorOpen(false); }} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <label className="px-2 py-1 border rounded cursor-pointer">
+          📎
+          <input type="file" accept="image/*,video/*" className="hidden" onChange={onPickFile} />
+        </label>
+
+        <span className="text-xs text-gray-500 ml-2">Tip: use #hashtags in your text to tag the post automatically.</span>
       </div>
 
       <div className="flex items-center gap-2">
@@ -173,16 +236,6 @@ export default function AdminNewHtmlPost() {
           </div>
         </div>
       )}
-
-      <div className="space-y-2">
-        <label className="block text-sm">Tags (comma-separated)</label>
-        <input
-          value={tags}
-          onChange={e=>setTags(e.target.value)}
-          className="w-full border rounded px-3 py-2"
-          placeholder="e.g. welcome, platform, patwua"
-        />
-      </div>
     </div>
   );
 }
