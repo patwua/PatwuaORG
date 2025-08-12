@@ -65,10 +65,10 @@ router.post('/', auth(true), async (req, res, next) => {
     const UserModel = require('../models/User');
     let personaDoc = null;
     if (personaId) {
-      personaDoc = await Persona.findOne({ _id: personaId, user: req.user.id }).lean().catch(() => null);
+      personaDoc = await Persona.findOne({ _id: personaId, ownerUserId: req.user.id }).lean().catch(() => null);
     }
     if (!personaDoc) {
-      personaDoc = await Persona.findOne({ user: req.user.id, isDefault: true }).lean();
+      personaDoc = await Persona.findOne({ ownerUserId: req.user.id, isDefault: true }).lean();
     }
     let personaName = personaDoc?.name;
     let personaAvatar = personaDoc?.avatar;
@@ -249,9 +249,9 @@ router.post('/:id/comments', auth(true), async (req, res, next) => {
     const UserModel = require('../models/User');
     let persona = null;
     if (personaId) {
-      persona = await PersonaModel.findOne({ _id: personaId, user: req.user.id }).lean().catch(() => null);
+      persona = await PersonaModel.findOne({ _id: personaId, ownerUserId: req.user.id }).lean().catch(() => null);
     }
-    if (!persona) persona = await PersonaModel.findOne({ user: req.user.id, isDefault: true }).lean();
+    if (!persona) persona = await PersonaModel.findOne({ ownerUserId: req.user.id, isDefault: true }).lean();
     let personaName = persona?.name;
     let personaAvatar = persona?.avatar;
     if (!persona) {
@@ -299,7 +299,7 @@ router.put('/:id/draft', auth(true), async (req, res, next) => {
     // Validate persona ownership (if provided)
     let persona = null;
     if (personaId) {
-      persona = await Persona.findOne({ _id: personaId, user: req.user.id }).lean();
+      persona = await Persona.findOne({ _id: personaId, ownerUserId: req.user.id }).lean();
       if (!persona) return res.status(400).json({ error: 'Invalid persona' });
     }
 

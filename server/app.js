@@ -34,10 +34,11 @@ app.get('/', (req, res) => {
 });
 
 // MongoDB Connection
-const mongoURI =
-  process.env.MONGO_URI ||
-  'mongodb+srv://patwuablogR2:zngaG3RbC6MPPIEL@cluster0.bvvnnry.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-
+const mongoURI = process.env.MONGODB_URI || process.env.MONGO_URI
+if (!mongoURI) {
+  console.error('Missing MONGODB_URI/MONGO_URI env var')
+  process.exit(1)
+}
 // Explicitly specify the database name to avoid authentication errors when the
 // connection string does not include one. This value can be overridden via the
 // MONGODB_DB environment variable.

@@ -20,8 +20,7 @@ export default function PostDetailPage() {
       try {
         setLoading(true)
         const { data } = await getPostBySlug(slug)
-        if (!alive) return
-        setPost(data.post)
+        if (alive) setPost(data.post)
         document.title = `${data.post.title} • Patwua`
       } catch (e: any) {
         setError(e?.message || 'Post not found')
