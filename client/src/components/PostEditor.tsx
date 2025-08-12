@@ -30,7 +30,7 @@ export default function PostEditor() {
 
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // load personas for selector
+  // load personas when editor opens
   useEffect(() => {
     if (!open) return
     api.get('/personas?owner=me')
@@ -144,6 +144,7 @@ export default function PostEditor() {
               <div>
                 <label className="block text-sm mb-1">Posting as</label>
                 <select value={personaId} onChange={e => setPersonaId(e.target.value)} className="border rounded px-2 py-2">
+                  {/* default persona option */}
                   <option value="">(default persona)</option>
                   {personas.map((p: any) => (
                     <option key={p._id} value={p._id}>{p.name}</option>
