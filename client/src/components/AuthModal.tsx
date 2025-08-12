@@ -1,29 +1,21 @@
 import { GoogleLogin } from '@react-oauth/google'
-import { jwtDecode } from 'jwt-decode'
-import { googleLogin } from '@/lib/auth'
 import { useAuth } from '@/context/AuthContext'
-
-type GoogleJwt = { email?: string; name?: string; picture?: string; sub: string }
+import { api } from '@/lib/api'
 
 export default function AuthModal({ onClose }: { onClose: () => void }) {
   const { setUser } = useAuth()
 
-  const onSuccess = async (credResp: any) => {
+  async function onGoogleSuccess(credentialResponse: any) {
     try {
-      const credential = credResp?.credential as string
-      if (!credential) return
-      // optional local decode for UX, server still verifies
-      jwtDecode<GoogleJwt>(credential)
-      const user = await googleLogin(credential)
-      setUser(user)
+      const credential = credentialResponse.credential
+      const { data } = await api.post('/auth/google', { credential })
+      localStorage.setItem('authToken', data.token)
+      localStorage.setItem('authUser', JSON.stringify(data.user))
+      setUser(data.user)
       onClose()
     } catch (e) {
-      console.error(e)
+      // handle error
     }
-  }
-
-  const onError = () => {
-    // handle error if needed
   }
 
   return (
@@ -31,7 +23,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
       <div className="min-h-full flex items-center justify-center p-4">
         <div className="card w-full max-w-sm p-5 my-8">
           <div className="space-y-3">
-            <GoogleLogin onSuccess={onSuccess} onError={onError} />
+            <GoogleLogin onSuccess={onGoogleSuccess} onError={() => {}} />
           </div>
           <button onClick={onClose} className="mt-3 text-sm underline">Close</button>
         </div>

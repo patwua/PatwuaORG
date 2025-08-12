@@ -1,4 +1,3 @@
-import { logout } from '@/lib/auth'
 import { useAuth } from '@/context/AuthContext'
 
 export default function AuthButtons() {
@@ -11,15 +10,9 @@ export default function AuthButtons() {
 }
 
 export function LogoutButton() {
-  const { setUser } = useAuth()
+  const { logout } = useAuth()
   return (
-    <button
-      onClick={async () => {
-        await logout()
-        setUser(null)
-      }}
-      className="text-sm text-gray-700"
-    >
+    <button onClick={logout} className="text-sm text-gray-700">
       Logout
     </button>
   )

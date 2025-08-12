@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import PostCard from '../components/PostCard'
-import { votePost, normalizePost } from '../lib/api'
+import { votePost, normalizePost, api } from '../lib/api'
 import type { Post } from '../types/post'
-
-const API = import.meta.env.VITE_API_BASE || ''
 
 export default function TagPage() {
   const { tag = '' } = useParams()
@@ -17,8 +15,7 @@ export default function TagPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const res = await fetch(`${API}/api/tags/${encodeURIComponent(tag.toLowerCase())}`, { credentials: 'include' })
-        const data = await res.json()
+        const { data } = await api.get(`/tags/${tag}`)
         const list = Array.isArray(data.posts) ? data.posts.map((p: any) => normalizePost(p)) : []
         if (alive) setPosts(list)
       } catch (e: any) {
@@ -33,7 +30,8 @@ export default function TagPage() {
   }, [tag])
 
   async function onVote(id: string, dir: 'up' | 'down') {
-    const { score, up, down, myVote } = await votePost(id, dir)
+    const { data } = await votePost(id, dir === 'up' ? 1 : -1)
+    const { score, up, down, myVote } = data
     setPosts(prev =>
       prev.map(p =>
         p.id === id

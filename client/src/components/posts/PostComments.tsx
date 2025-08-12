@@ -68,8 +68,8 @@ export default function PostComments({ post }: { post: Post }) {
         <form onSubmit={onSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex gap-2">
             <Avatar className="flex-shrink-0">
-              <AvatarImage src={avatarUrl(user.avatar || '')} />
-              <AvatarFallback>{user.name?.charAt(0)}</AvatarFallback>
+              <AvatarImage src={avatarUrl(user.avatar || user.avatarUrl || '')} />
+              <AvatarFallback>{(user.displayName || user.email).charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1 relative">
               <input

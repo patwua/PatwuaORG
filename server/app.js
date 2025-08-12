@@ -14,13 +14,16 @@ const usersRoutes  = require('./routes/users');
 
 const app = express();
 
-// CORS for Vite client (credentials so cookies work)
+// CORS: front-end origin
+const ORIGIN = process.env.ALLOWED_ORIGIN || 'https://patwuaorg.onrender.com';
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN,
-  credentials: true,
+  origin: ORIGIN,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 app.get('/healthz', (_req, res) => res.send('ok'));

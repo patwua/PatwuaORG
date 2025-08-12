@@ -63,14 +63,14 @@ describe('normalizePost', () => {
 })
 
 describe('getPosts', () => {
-  it('calls the posts endpoint with credentials', async () => {
+  it('calls the posts endpoint', async () => {
     const mockResponse = { ok: true, json: vi.fn().mockResolvedValue([]) } as any
     const fetchMock = vi.fn().mockResolvedValue(mockResponse)
     globalThis.fetch = fetchMock as any
 
     await getPosts()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/posts?status=active', { credentials: 'include' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/posts?status=active')
   })
 
   it('throws when response is not ok', async () => {
