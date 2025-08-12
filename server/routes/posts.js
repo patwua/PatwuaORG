@@ -89,8 +89,9 @@ router.post('/', auth(true), async (req, res, next) => {
       bodyHtml = sanitize(raw);
       bodyText = stripToText(bodyHtml).slice(0, 800);
     } else { // richtext
-      if (!raw.trim()) return res.status(400).json({ error: 'Body required' });
-      bodyText = raw;
+
+      if (!raw) return res.status(400).json({ error: 'Body required' });
+      bodyText = String(raw);
     }
 
     // media + cover
