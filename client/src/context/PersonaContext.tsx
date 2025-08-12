@@ -27,13 +27,13 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
     }
     setLoading(true)
     try {
-      const items = await listPersonas() // returns a raw array
+      const items = await listPersonas() // server returns raw array
       setPersonas(items)
       if (!selectedId) {
-        const def = items.find(p => (p as any).isDefault) || items[0]
-        if (def && (def as any)._id) {
-          setSelectedId((def as any)._id)
-          localStorage.setItem(KEY, (def as any)._id)
+        const def = items.find((p: any) => p.isDefault) || items[0]
+        if (def?._id) {
+          setSelectedId(def._id)
+          localStorage.setItem(KEY, def._id)
         }
       }
     } finally {
@@ -47,9 +47,7 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
       if (!alive) return
       await load()
     })()
-    return () => {
-      alive = false
-    }
+    return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
@@ -76,4 +74,3 @@ export function usePersona() {
   if (!v) throw new Error('usePersona must be used within PersonaProvider')
   return v
 }
-

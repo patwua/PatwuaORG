@@ -30,9 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const raw = localStorage.getItem('authUser')
     if (raw) {
-      try {
-        setUser(JSON.parse(raw))
-      } catch {}
+      try { setUser(JSON.parse(raw)) } catch {}
     }
   }, [])
 
@@ -51,4 +49,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(() => ({ user, setUser, logout }), [user])
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>
 }
-
