@@ -4,7 +4,7 @@ const cheerio = require('cheerio');
 
 const allowedTags = sanitizeHtml.defaults.allowedTags.concat([
   'img','table','thead','tbody','tfoot','tr','td','th',
-  'iframe','video','source','figure','figcaption','section','article','header','footer','style','p','div','span','h1','h2','h3','h4','h5','h6'
+  'iframe','video','source','figure','figcaption','section','article','header','footer','style','p','div','span','h1','h2','h3','h4','h5','h6','html','head','body','title'
 ]);
 
 const allowedAttributes = {
