@@ -289,5 +289,31 @@ describe('create route', () => {
       expect.objectContaining({ tags: 'wearepatwua', status: 'active' }),
     ]);
   });
+
+  test('accepts content field for plain text bodies', async () => {
+    const user = { _id: new mongoose.Types.ObjectId(), email: 'c@e.com', role: 'user' };
+
+    jest
+      .spyOn(Persona, 'findOne')
+      .mockReturnValue({ lean: () => Promise.resolve(null) });
+    jest
+      .spyOn(User, 'findById')
+      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
+    jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
+
+    const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => ({
+      _id: new mongoose.Types.ObjectId().toString(),
+      slug: 'slug',
+      ...payload,
+    }));
+
+    const res = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send({ title: 'Hello', content: 'Body via content' });
+
+    expect(res.status).toBe(201);
+    expect(createSpy.mock.calls[0][0].body).toBe('Body via content');
+  });
 });
 
