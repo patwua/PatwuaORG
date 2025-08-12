@@ -32,11 +32,11 @@ export default function PostEditor() {
 
   // load personas for selector
   useEffect(() => {
-    if (!open) return;
-    api.get('/personas?owner=me', { withCredentials: true })
-      .then(({data}) => setPersonas(data.personas || []))
-      .catch(()=>{});
-  }, [open]);
+    if (!open) return
+    api.get('/personas?owner=me')
+      .then(({ data }) => setPersonas(Array.isArray(data) ? data : (data.personas || [])))
+      .catch(() => {})
+  }, [open])
 
   function resetAll() {
     setTitle(''); setContent(''); setPreviewHtml(null); setCoverSuggested(null);
@@ -47,7 +47,7 @@ export default function PostEditor() {
   async function doPreview() {
     setBusy(true); setError(null);
     try {
-      const { data } = await api.post('/posts/preview', { content }, { withCredentials: true });
+      const { data } = await api.post('/posts/preview', { content });
       setPreviewHtml(data.html);
       setImages(data.media?.images || []);
       setVideos(data.media?.videos || []);
@@ -63,7 +63,7 @@ export default function PostEditor() {
       const payload: any = { title, content };
       if (personaId) payload.personaId = personaId;
       if (coverOverride) payload.coverImage = coverOverride;
-      const { data } = await api.post('/posts', payload, { withCredentials: true });
+      const { data } = await api.post('/posts', payload);
       setOpen(false);
       resetAll();
       window.location.href = `/p/${data.post.slug}`;
@@ -143,9 +143,11 @@ export default function PostEditor() {
               {/* Persona */}
               <div>
                 <label className="block text-sm mb-1">Posting as</label>
-                <select value={personaId} onChange={e=>setPersonaId(e.target.value)} className="border rounded px-2 py-2">
+                <select value={personaId} onChange={e => setPersonaId(e.target.value)} className="border rounded px-2 py-2">
                   <option value="">(default persona)</option>
-                  {personas.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+                  {personas.map((p: any) => (
+                    <option key={p._id} value={p._id}>{p.name}</option>
+                  ))}
                 </select>
               </div>
 
