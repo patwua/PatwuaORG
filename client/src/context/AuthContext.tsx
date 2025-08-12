@@ -1,29 +1,35 @@
-import { createContext, useContext, useMemo, useState } from 'react'
-import type { User } from '../types/auth'
-import { logout as apiLogout } from '@/lib/auth'
+import { createContext, useContext, useEffect, useState } from 'react'
 
-type AuthState = {
-  user: User | null
-  setUser: (u: User | null) => void
-  logout: () => Promise<void>
-}
+type User = { id: string; email: string; role: string; displayName?: string; avatar?: string | null; avatarUrl?: string | null }
 
-const Ctx = createContext<AuthState | undefined>(undefined)
+const AuthCtx = createContext<{ user: User | null; setUser: (u: User | null) => void; logout: () => void }>({
+  user: null,
+  setUser: () => {},
+  logout: () => {},
+})
+export const useAuth = () => useContext(AuthCtx)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
 
-  async function logout() {
-    await apiLogout()
+  useEffect(() => {
+    const raw = localStorage.getItem('authUser')
+    if (raw) {
+      try {
+        setUser(JSON.parse(raw))
+      } catch {}
+    }
+  }, [])
+
+  function logout() {
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('authUser')
     setUser(null)
   }
 
-  const value = useMemo(() => ({ user, setUser, logout }), [user])
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
-}
+  useEffect(() => {
+    if (user) localStorage.setItem('authUser', JSON.stringify(user))
+  }, [user])
 
-export function useAuth() {
-  const v = useContext(Ctx)
-  if (!v) throw new Error('useAuth must be used within AuthProvider')
-  return v
+  return <AuthCtx.Provider value={{ user, setUser, logout }}>{children}</AuthCtx.Provider>
 }

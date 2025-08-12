@@ -51,7 +51,7 @@ function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona 
         </button>
         {user ? (
           <>
-            <button onClick={() => navigate(`/u/${user?.slug || 'me'}`)} className="text-sm underline hidden sm:inline">Hi, {user.name}</button>
+            <button onClick={() => navigate('/u/me')} className="text-sm underline hidden sm:inline">Hi, {user.displayName || user.email}</button>
             {user.role === 'admin' && (
               <button onClick={onOpenAddPersona} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
                 Add Persona
@@ -111,7 +111,8 @@ export default function App() {
   }, [])
 
   async function onVote(id: string, dir: 'up' | 'down') {
-    const { score, up, down, myVote } = await votePost(id, dir)
+    const { data } = await votePost(id, dir === 'up' ? 1 : -1)
+    const { score, up, down, myVote } = data
     setPosts(prev =>
       prev.map(p =>
         p.id === id

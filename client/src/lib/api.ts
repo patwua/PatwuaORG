@@ -4,10 +4,14 @@ import type { Post } from '../types/post'
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
 export const api = axios.create({
-  baseURL: `${API_BASE}/api`,
-  withCredentials: true,
+  baseURL: `${API_BASE}/api`
 })
 
+api.interceptors.request.use(cfg => {
+  const token = localStorage.getItem('authToken')
+  if (token) cfg.headers = { ...cfg.headers, Authorization: `Bearer ${token}` }
+  return cfg
+})
 
 // Normalize server payloads into our Post shape
 export function normalizePost(p: any): Post {
@@ -55,7 +59,7 @@ async function handle(res: Response) {
 }
 
 export async function getPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/api/posts?status=active`, { credentials: 'include' })
+  const res = await fetch(`${API_BASE}/api/posts?status=active`)
   const data = await handle(res)
   const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : []
   return list.map((p: any) =>
@@ -69,7 +73,7 @@ export async function getPosts(): Promise<Post[]> {
 }
 
 export async function getPost(id: string): Promise<Post> {
-  const r = await fetch(`${API_BASE}/api/posts/${id}`, { credentials: 'include' })
+  const r = await fetch(`${API_BASE}/api/posts/${id}`)
   return handle(r) as Promise<Post>
 }
 
@@ -80,17 +84,17 @@ export const archivePost = (id: string, reason: string) => api.post(`/posts/${id
 export const unarchivePost = (id: string) => api.post(`/posts/${id}/unarchive`)
 
 export const previewPost = (payload: { content?: string; body?: string }) =>
-  api.post('/posts/preview', payload, { withCredentials: true })
+  api.post('/posts/preview', payload)
 
 export const createPost = (payload: { title: string; content?: string; body?: string; personaId?: string; coverImage?: string }) =>
-  api.post('/posts', payload, { withCredentials: true })
+  api.post('/posts', payload)
 
 export const votePost = (postId: string, value: -1 | 0 | 1) =>
-  api.post(`/posts/${postId}/vote`, { value }, { withCredentials: true })
+  api.post(`/posts/${postId}/vote`, { value })
 export const getVotes = (postId: string) =>
-  api.get(`/posts/${postId}/votes`, { withCredentials: true })
+  api.get(`/posts/${postId}/votes`)
 export const getComments = (postId: string) => api.get(`/posts/${postId}/comments`)
 export const addComment = (
   postId: string,
   payload: { body: string; personaId?: string }
-) => api.post(`/posts/${postId}/comments`, payload, { withCredentials: true })
+) => api.post(`/posts/${postId}/comments`, payload)

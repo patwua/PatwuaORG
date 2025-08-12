@@ -4,7 +4,6 @@ const Persona = require('../models/Persona');
 const PostDraft = require('../models/PostDraft');
 const Vote = require('../models/Vote');
 const Comment = require('../models/Comment');
-const User = require('../models/User');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
@@ -62,13 +61,21 @@ router.post('/', auth(true), async (req, res, next) => {
     const { title, content = '', body = '', coverImage, personaId } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
 
-    // persona: provided → else user's default → else user info
+    // persona handling (safe fallback)
+    const UserModel = require('../models/User');
     let personaDoc = null;
     if (personaId) {
       personaDoc = await Persona.findOne({ _id: personaId, user: req.user.id }).lean().catch(() => null);
     }
     if (!personaDoc) {
       personaDoc = await Persona.findOne({ user: req.user.id, isDefault: true }).lean();
+    }
+    let personaName = personaDoc?.name;
+    let personaAvatar = personaDoc?.avatar;
+    if (!personaDoc) {
+      const u = await UserModel.findById(req.user.id).lean();
+      personaName = u?.displayName || (u?.email ? u.email.split('@')[0] : 'Anonymous');
+      personaAvatar = u?.avatar || u?.avatarUrl || u?.googleAvatar || null;
     }
 
     // Prefer first non-empty field between `content` and `body`
@@ -120,19 +127,10 @@ router.post('/', auth(true), async (req, res, next) => {
       coverImage: cover || undefined,
       media,
       tags: hashTags,
+      personaId: personaDoc?._id || undefined,
+      personaName,
+      personaAvatar,
     };
-
-    if (personaDoc) {
-      postPayload.personaId = personaDoc._id;
-      postPayload.personaName = personaDoc.name;
-      postPayload.personaAvatar = personaDoc.avatar;
-    } else {
-      const u = await User.findById(req.user.id).lean();
-      if (u) {
-        postPayload.personaName = u.displayName || u.name || u.email?.split('@')[0];
-        postPayload.personaAvatar = u.avatar || null;
-      }
-    }
 
     let doc = await Post.create(postPayload);
 
@@ -247,21 +245,27 @@ router.post('/:id/comments', auth(true), async (req, res, next) => {
   try {
     const { body, personaId } = req.body || {};
     if (!body || !String(body).trim()) return res.status(400).json({ error: 'Comment required' });
-
+    const PersonaModel = require('../models/Persona');
+    const UserModel = require('../models/User');
     let persona = null;
     if (personaId) {
-      persona = await Persona.findOne({ _id: personaId, user: req.user.id }).lean();
-      if (!persona) return res.status(400).json({ error: 'Invalid persona' });
-    } else {
-      persona = await Persona.findOne({ user: req.user.id, isDefault: true }).lean();
+      persona = await PersonaModel.findOne({ _id: personaId, user: req.user.id }).lean().catch(() => null);
+    }
+    if (!persona) persona = await PersonaModel.findOne({ user: req.user.id, isDefault: true }).lean();
+    let personaName = persona?.name;
+    let personaAvatar = persona?.avatar;
+    if (!persona) {
+      const u = await UserModel.findById(req.user.id).lean();
+      personaName = u?.displayName || (u?.email ? u.email.split('@')[0] : 'Anonymous');
+      personaAvatar = u?.avatar || u?.avatarUrl || u?.googleAvatar || null;
     }
 
     const c = await Comment.create({
       post: req.params.id,
       user: req.user.id,
       personaId: persona?._id,
-      personaName: persona?.name,
-      personaAvatar: persona?.avatar,
+      personaName,
+      personaAvatar,
       body: String(body).trim(),
     });
 
