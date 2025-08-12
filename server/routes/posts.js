@@ -71,19 +71,25 @@ router.post('/', auth(true), async (req, res, next) => {
       personaDoc = await Persona.findOne({ user: req.user.id, isDefault: true }).lean();
     }
 
-    const raw = content || body || '';
+    // Prefer first non-empty field between `content` and `body`
+    const raw = [content, body].find(v => typeof v === 'string' && v.trim()) || '';
     const fmt = detectFormat(raw);
 
     let bodyText = '';
     let bodyHtml = null;
 
     if (fmt === 'mjml') {
-      bodyHtml = sanitize(compileMjml(raw));
+      try {
+        bodyHtml = sanitize(compileMjml(raw));
+      } catch (err) {
+        return res.status(400).json({ error: 'MJML error: ' + String(err.message || err) });
+      }
       bodyText = stripToText(bodyHtml).slice(0, 800);
     } else if (fmt === 'html') {
       bodyHtml = sanitize(raw);
       bodyText = stripToText(bodyHtml).slice(0, 800);
     } else { // richtext
+
       if (!raw) return res.status(400).json({ error: 'Body required' });
       bodyText = String(raw);
     }
@@ -357,7 +363,12 @@ router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
     if (draft.content) {
       const fmt = detectFormat(draft.content);
       if (fmt === 'mjml') {
-        const compiled = compileMjml(draft.content);
+        let compiled;
+        try {
+          compiled = compileMjml(draft.content);
+        } catch (err) {
+          return res.status(400).json({ error: 'MJML error: ' + String(err.message || err) });
+        }
         post.bodyHtml = sanitize(compiled);
         post.body = stripToText(post.bodyHtml).slice(0, 800);
         post.format = 'mjml';

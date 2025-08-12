@@ -290,7 +290,8 @@ describe('create route', () => {
     ]);
   });
 
-  test('accepts content field for plain text bodies', async () => {
+  test.each(['body', 'content'])('accepts %s field for plain text bodies', async field => {
+
     const user = { _id: new mongoose.Types.ObjectId(), email: 'c@e.com', role: 'user' };
 
     jest
@@ -307,13 +308,65 @@ describe('create route', () => {
       ...payload,
     }));
 
+    const text = 'Line one\n\nLine two\nLine three';
+    const payload = { title: 'Hello', [field]: text };
+
     const res = await request(app)
       .post('/api/posts')
       .set('Authorization', `Bearer ${sign(user)}`)
-      .send({ title: 'Hello', content: 'Body via content' });
+      .send(payload);
 
     expect(res.status).toBe(201);
-    expect(createSpy.mock.calls[0][0].body).toBe('Body via content');
+    expect(createSpy.mock.calls[0][0].body).toBe(text);
+  });
+
+  test('accepts MJML content for body', async () => {
+    const user = { _id: new mongoose.Types.ObjectId(), email: 'm@j.com', role: 'user' };
+
+    jest
+      .spyOn(Persona, 'findOne')
+      .mockReturnValue({ lean: () => Promise.resolve(null) });
+    jest
+      .spyOn(User, 'findById')
+      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
+    jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
+
+    const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => ({
+      _id: new mongoose.Types.ObjectId().toString(),
+      slug: 'slug',
+      ...payload,
+    }));
+
+    const mjml = '<mjml><mj-body><mj-section><mj-column><mj-text>Hello</mj-text></mj-column></mj-section></mj-body></mjml>';
+
+    const res = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send({ title: 'Hello', content: mjml });
+
+    expect(res.status).toBe(201);
+    expect(createSpy.mock.calls[0][0].format).toBe('mjml');
+    expect(createSpy.mock.calls[0][0].body).toBe('Hello');
+    expect(createSpy.mock.calls[0][0].bodyHtml).toContain('<html');
+  });
+
+  test('rejects invalid MJML content', async () => {
+    const user = { _id: new mongoose.Types.ObjectId(), email: 'b@a.com', role: 'user' };
+
+    jest
+      .spyOn(Persona, 'findOne')
+      .mockReturnValue({ lean: () => Promise.resolve(null) });
+    jest
+      .spyOn(User, 'findById')
+      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
+
+    const res = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send({ title: 'Oops', content: '<mjml><mj-body><mj-txt>bad</mj-txt></mj-body></mjml>' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/MJML error/);
   });
 });
 
