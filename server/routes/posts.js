@@ -4,6 +4,7 @@ const Persona = require('../models/Persona');
 const PostDraft = require('../models/PostDraft');
 const Vote = require('../models/Vote');
 const Comment = require('../models/Comment');
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
@@ -35,8 +36,13 @@ router.post('/preview', auth(true), async (req, res, next) => {
     const fmt = detectFormat(raw);
 
     let html = '';
-    if (fmt === 'mjml') html = sanitize(compileMjml(raw));
-    else if (fmt === 'html') html = sanitize(raw);
+    if (fmt === 'mjml') {
+      try {
+        html = sanitize(compileMjml(raw));
+      } catch (err) {
+        return res.status(400).json({ error: 'MJML error: ' + String(err.message || err) });
+      }
+    } else if (fmt === 'html') html = sanitize(raw);
     else {
       const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
       const safe = esc(raw).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br/>');
@@ -56,13 +62,13 @@ router.post('/', auth(true), async (req, res, next) => {
     const { title, content = '', body = '', coverImage, personaId } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
 
-    // persona: provided → else user's default → else none
-    let persona = null;
+    // persona: provided → else user's default → else user info
+    let personaDoc = null;
     if (personaId) {
-      persona = await Persona.findOne({ _id: personaId, user: req.user.id }).lean();
-      if (!persona) return res.status(400).json({ error: 'Invalid persona' });
-    } else {
-      persona = await Persona.findOne({ user: req.user.id, isDefault: true }).lean();
+      personaDoc = await Persona.findOne({ _id: personaId, user: req.user.id }).lean().catch(() => null);
+    }
+    if (!personaDoc) {
+      personaDoc = await Persona.findOne({ user: req.user.id, isDefault: true }).lean();
     }
 
     const raw = content || body || '';
@@ -94,21 +100,35 @@ router.post('/', auth(true), async (req, res, next) => {
       if (!cover) cover = chooseCover(m);
     }
 
+    const hashTags = bodyHtml ? extractHashtagsFromHtml(bodyHtml) : extractHashtagsFromText(bodyText);
+
     const type = Post.resolveTypeForRole(req.user.role);
-    let doc = await Post.create({
+    let postPayload = {
       title,
       body: bodyText,
       bodyHtml,
       sourceRaw: bodyHtml ? raw : undefined,
       format: fmt,
       author: req.user.id,
-      personaId: persona?._id || undefined,
-      personaName: persona?.name || undefined,
-      personaAvatar: persona?.avatar || undefined,
       type,
       coverImage: cover || undefined,
-      media
-    });
+      media,
+      tags: hashTags,
+    };
+
+    if (personaDoc) {
+      postPayload.personaId = personaDoc._id;
+      postPayload.personaName = personaDoc.name;
+      postPayload.personaAvatar = personaDoc.avatar;
+    } else {
+      const u = await User.findById(req.user.id).lean();
+      if (u) {
+        postPayload.personaName = u.displayName || u.name || u.email?.split('@')[0];
+        postPayload.personaAvatar = u.avatar || null;
+      }
+    }
+
+    let doc = await Post.create(postPayload);
 
     // CTA token replacement: [[POST_URL]]
     if (doc.bodyHtml) {
@@ -123,12 +143,8 @@ router.post('/', auth(true), async (req, res, next) => {
     // Hashtag tags (+ optional AI) → normalized and saved async
     setImmediate(async () => {
       try {
-        const hashTags = doc.bodyHtml ? extractHashtagsFromHtml(doc.bodyHtml) : extractHashtagsFromText(doc.body || '');
-        let final = hashTags;
-        try {
-          const suggestions = await runTagAI({ title: doc.title, body: doc.body, html: doc.bodyHtml }) || [];
-          final = normalize([ ...hashTags, ...suggestions ]);
-        } catch { /* AI optional */ }
+        const suggestions = await runTagAI({ title: doc.title, body: doc.body, html: doc.bodyHtml }) || [];
+        const final = normalize([ ...hashTags, ...suggestions ]);
         await Post.findByIdAndUpdate(doc._id, { tags: final });
       } catch {}
     });
