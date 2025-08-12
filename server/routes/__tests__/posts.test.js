@@ -6,6 +6,9 @@ const mongoose = require('mongoose');
 const Post = require('../../models/Post');
 const PostDraft = require('../../models/PostDraft');
 const postsRouter = require('../posts');
+const tagsRouter = require('../tags');
+const Persona = require('../../models/Persona');
+const User = require('../../models/User');
 
 function sign(user) {
   return jwt.sign(
@@ -21,6 +24,7 @@ beforeAll(() => {
   app = express();
   app.use(express.json());
   app.use('/api/posts', postsRouter);
+  app.use('/api/tags', tagsRouter);
 });
 
 afterEach(() => {
@@ -182,6 +186,108 @@ describe('draft routes', () => {
     await new Promise(r => setImmediate(r));
     const finalTags = updateSpy.mock.calls[0][1].tags;
     expect(finalTags).toEqual(expect.arrayContaining(['custom', 'hello']));
+  });
+});
+
+describe('preview route', () => {
+  test('returns 400 for invalid MJML input', async () => {
+    const user = { _id: new mongoose.Types.ObjectId(), email: 'p@e.com', role: 'user' };
+
+    const res = await request(app)
+      .post('/api/posts/preview')
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send({ content: '<mjml><mj-body><mj-txt>bad</mj-txt></mj-body></mjml>' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/MJML error/);
+  });
+});
+
+describe('create route', () => {
+  test('falls back to user info when personaId is invalid', async () => {
+    const user = { _id: new mongoose.Types.ObjectId(), email: 'u@test.com', role: 'user' };
+
+    jest
+      .spyOn(Persona, 'findOne')
+      .mockReturnValue({ lean: () => Promise.resolve(null) });
+    jest
+      .spyOn(User, 'findById')
+      .mockReturnValue({
+        lean: () =>
+          Promise.resolve({ _id: user._id, displayName: 'UserDisp', avatar: 'a.png', email: user.email }),
+      });
+    jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
+
+    const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => ({
+      _id: new mongoose.Types.ObjectId().toString(),
+      slug: 'slug',
+      ...payload,
+    }));
+
+    const res = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send({ title: 'hello', body: 'body', personaId: new mongoose.Types.ObjectId().toString() });
+
+    expect(res.status).toBe(201);
+    expect(createSpy.mock.calls[0][0].personaName).toBe('UserDisp');
+    expect(res.body.post.personaName).toBe('UserDisp');
+    expect(res.body.post.personaAvatar).toBe('a.png');
+  });
+
+  test('extracts hashtags and tag endpoint lists the post', async () => {
+    const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
+
+    jest
+      .spyOn(Persona, 'findOne')
+      .mockReturnValue({ lean: () => Promise.resolve(null) });
+    jest
+      .spyOn(User, 'findById')
+      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
+
+    let created;
+    const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => {
+      created = { _id: new mongoose.Types.ObjectId().toString(), slug: 'welcome', ...payload };
+      return created;
+    });
+    jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
+
+    const findFilters = [];
+    jest.spyOn(Post, 'find').mockImplementation(filter => {
+      findFilters.push(filter);
+      return {
+        sort: () => ({
+          limit: () => ({
+            lean: () => Promise.resolve([created]),
+          }),
+        }),
+      };
+    });
+
+    const res = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send({ title: 'Hello', body: 'Hi #WeArePatwua' });
+
+    expect(res.status).toBe(201);
+    expect(createSpy.mock.calls[0][0].tags).toEqual(['wearepatwua']);
+
+    await new Promise(r => setImmediate(r));
+
+    const tagMixed = await request(app).get('/api/tags/WeArePatwua');
+    expect(tagMixed.status).toBe(200);
+    expect(tagMixed.body.tag).toBe('wearepatwua');
+    expect(tagMixed.body.posts[0].title).toBe('Hello');
+
+    const tagLower = await request(app).get('/api/tags/wearepatwua');
+    expect(tagLower.status).toBe(200);
+    expect(tagLower.body.tag).toBe('wearepatwua');
+    expect(tagLower.body.posts[0].title).toBe('Hello');
+
+    expect(findFilters).toEqual([
+      expect.objectContaining({ tags: 'wearepatwua', status: 'active' }),
+      expect.objectContaining({ tags: 'wearepatwua', status: 'active' }),
+    ]);
   });
 });
 
