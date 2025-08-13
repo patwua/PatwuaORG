@@ -57,14 +57,20 @@ export default function PostDetailPage() {
           {post.author?.avatar && (
             <img
               src={post.author.avatar}
-              alt={post.author.displayName || post.author.handle || 'Avatar'}
+              alt={post.author.displayName || (post.author.handle ? '@' + post.author.handle : 'Avatar')}
               className="h-full w-full object-cover"
             />
           )}
         </div>
         <div>
           <div className="font-semibold">
-            {post.author?.displayName || (post.author?.handle ? '@' + post.author.handle : 'Unknown')}
+            {post.author?.handle ? (
+              <a href={`/@${post.author.handle}`} className="hover:underline">
+                {post.author.displayName || '@' + post.author.handle}
+              </a>
+            ) : (
+              post.author?.displayName || 'Unknown'
+            )}
           </div>
           <div className="text-xs text-neutral-500">
             {created ? created.toLocaleString() : ''}

@@ -68,7 +68,7 @@ export default function PostCard({
           {post.author?.avatar ? (
             <img
               src={post.author.avatar}
-              alt={post.author?.displayName || post.author?.handle || 'Avatar'}
+              alt={post.author?.displayName || (post.author?.handle ? '@' + post.author.handle : 'Avatar')}
               className="h-9 w-9 rounded-full object-cover"
             />
           ) : (
@@ -81,7 +81,7 @@ export default function PostCard({
                   {post.author.displayName || '@' + post.author.handle}
                 </a>
               ) : (
-                <span>{post.author?.displayName || (post.author?.email ? post.author.email.split('@')[0] : 'Unknown')}</span>
+                <span>{post.author?.displayName || (post.author?.handle ? '@' + post.author.handle : 'Unknown')}</span>
               )}
               {post.author?.verified && <CheckCheck className="h-4 w-4 text-emerald-500" />}
             </div>
