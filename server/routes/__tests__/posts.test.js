@@ -458,7 +458,7 @@ describe('hard delete route', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true, deletedPostId: postId, deletedPost: true });
     expect(delComments).toHaveBeenCalledWith({ post: postId });
-    expect(delVotes).toHaveBeenCalledWith({ post: postId });
+    expect(delVotes).toHaveBeenCalledWith({ postId });
     expect(delDrafts).toHaveBeenCalledWith({ post: postId });
     expect(delPost).toHaveBeenCalledWith({ _id: postId });
   });

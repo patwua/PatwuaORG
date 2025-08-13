@@ -145,7 +145,7 @@ router.get('/by-handle/:handle/counts', async (req, res, next) => {
     const postIds = await Post.find({ authorUserId: user._id }).select('_id').lean();
     const ids = postIds.map(p => p._id);
     const upvotes = ids.length
-      ? await Vote.countDocuments({ post: { $in: ids }, value: 1 })
+      ? await Vote.countDocuments({ postId: { $in: ids }, value: 1 })
       : 0;
     res.json({ posts, comments, upvotes });
   } catch (e) { next(e); }

@@ -27,13 +27,15 @@ export function normalizePost(p: any): Post {
     path: p.path ?? (p.slug ? `/p/${p.slug}` : undefined),
     slug: p.slug,
     type: p.type,
-    author: p.authorUserId || p.author || {},
+    author: p.author || p.authorUserId || {},
     stats: {
       comments: Number(p.stats?.comments ?? p.commentCount ?? p.comments ?? 0),
       votes: Number(p.stats?.votes ?? p.votes ?? p.score ?? 0),
       up: Number(p.stats?.up ?? p.up ?? 0),
       down: Number(p.stats?.down ?? p.down ?? 0),
-      myVote: typeof (p.stats?.myVote ?? p.myVote) === 'number' ? Number(p.stats?.myVote ?? p.myVote) : undefined,
+      myVote: typeof (p.stats?.myVote ?? p.myVote ?? p.userVote) === 'number'
+        ? Number(p.stats?.myVote ?? p.myVote ?? p.userVote)
+        : undefined,
     },
     media: Array.isArray(p.media) ? p.media : undefined,
     // prefer createdAt, fall back to timestamp/updatedAt
@@ -87,7 +89,8 @@ export const votePost = (postId: string, value: -1 | 0 | 1) =>
   api.post(`/posts/${postId}/vote`, { value })
 export const getVotes = (postId: string) =>
   api.get(`/posts/${postId}/votes`)
-export const getComments = (postId: string) => api.get(`/posts/${postId}/comments`)
+export const getComments = (postId: string, params: { page?: number; limit?: number } = {}) =>
+  api.get(`/posts/${postId}/comments`, { params })
 export const addComment = (
   postId: string,
   payload: { body: string }
