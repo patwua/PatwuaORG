@@ -11,6 +11,7 @@ const tagsRoutes    = require('./routes/tags');
 const reviewRoutes = require('./routes/review');
 const usersRoutes  = require('./routes/users');
 const redirectRoutes = require('./routes/redirects');
+const PostDraft = require('./models/PostDraft');
 
 const app = express();
 
@@ -46,7 +47,19 @@ const mongoDBName = process.env.MONGODB_DB || 'patwua';
 
 mongoose
   .connect(mongoURI, { dbName: mongoDBName })
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => {
+    console.log('Connected to MongoDB')
+    const hours = Number(process.env.DRAFT_TTL_HOURS || 72)
+    setInterval(async () => {
+      try {
+        const cutoff = new Date(Date.now() - hours * 3600 * 1000)
+        const { deletedCount } = await PostDraft.deleteMany({ updatedAt: { $lt: cutoff } })
+        if (deletedCount) console.log(`Purged ${deletedCount} stale drafts`)
+      } catch (e) {
+        console.error('Draft cleanup error', e)
+      }
+    }, 60 * 60 * 1000)
+  })
   .catch((err) => console.error('MongoDB connection error:', err));
 
 // Routes

@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Link, useNavigate } from 'react-router-dom'
-import { Moon, SunMedium, PenSquare, ClipboardCheck } from 'lucide-react'
-import AdminReviewModal from './components/AdminReviewModal'
+import { Moon, SunMedium, PenSquare } from 'lucide-react'
 import Search from './components/Search'
 import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
@@ -19,7 +18,7 @@ import TrendingTags from './components/TrendingTags'
 
 const PostEditorLazy = lazy(() => import('./components/PostEditor'))
 
-function Header({ onOpenAuth, onOpenReview, onOpenEditProfile }: { onOpenAuth: () => void; onOpenReview: () => void; onOpenEditProfile: () => void }) {
+function Header({ onOpenAuth, onOpenEditProfile }: { onOpenAuth: () => void; onOpenEditProfile: () => void }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [dark, setDark] = useState(false)
@@ -52,12 +51,6 @@ function Header({ onOpenAuth, onOpenReview, onOpenEditProfile }: { onOpenAuth: (
             <button onClick={onOpenEditProfile} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
               Edit Profile
             </button>
-            {user.role === 'admin' && (
-              <button onClick={onOpenReview} className="ml-2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
-                <ClipboardCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">Review</span>
-              </button>
-            )}
             <button onClick={logout} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
               Logout
             </button>
@@ -79,7 +72,6 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAuth, setShowAuth] = useState(false)
-  const [showReview, setShowReview] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
 
   useEffect(() => {
@@ -124,7 +116,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
-      <Header onOpenAuth={() => setShowAuth(true)} onOpenReview={() => setShowReview(true)} onOpenEditProfile={() => setShowEditProfile(true)} />
+      <Header onOpenAuth={() => setShowAuth(true)} onOpenEditProfile={() => setShowEditProfile(true)} />
       <section className="bg-gradient-to-br from-orange-100 via-amber-50 to-white dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 border-b border-orange-100/70 dark:border-neutral-800">
         <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Where Every Voice Has a Place</h1>
@@ -199,7 +191,6 @@ export default function App() {
         <PostEditorLazy />
       </Suspense>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-      {showReview && <AdminReviewModal onClose={() => setShowReview(false)} />}
       {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
       <HandlePickerModal />
     </div>
