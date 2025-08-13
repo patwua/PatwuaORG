@@ -33,7 +33,9 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  jest.spyOn(User, 'findById').mockImplementation(id => ({ lean: () => Promise.resolve({ _id: id, email: 'x', handle: 'h' }) }));
+  jest.spyOn(User, 'findById').mockImplementation(id => ({
+    lean: () => Promise.resolve({ _id: id, email: 'x', handle: 'tester' })
+  }));
 });
 
 describe('archive and unarchive routes', () => {
@@ -144,12 +146,9 @@ describe('draft routes', () => {
   test('normalizes tags on save', async () => {
     const postId = new mongoose.Types.ObjectId();
     const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
-    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
-
-
-    jest
-      .spyOn(User, "findById")
-      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: "h" }) });
+    User.findById.mockReturnValue({
+      lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'tester' })
+    });
 
     jest
       .spyOn(Post, 'findById')
@@ -177,7 +176,9 @@ describe('draft routes', () => {
   test('publishing draft merges saved tags with hashtags', async () => {
     const postId = new mongoose.Types.ObjectId();
     const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
-    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
+    User.findById.mockReturnValue({
+      lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'tester' })
+    });
 
 
     const draft = { _id: new mongoose.Types.ObjectId(), content: '<p>#Hello world</p>', tags: ['custom'] };
@@ -195,6 +196,23 @@ describe('draft routes', () => {
     expect(res.status).toBe(200);
     expect(postDoc.tags).toEqual(expect.arrayContaining(['custom', 'hello']));
 
+  });
+
+  test('publishing draft requires handle', async () => {
+    const postId = new mongoose.Types.ObjectId();
+    const user = { _id: new mongoose.Types.ObjectId(), email: 'n@h.com', role: 'user' };
+    User.findById.mockReturnValueOnce({
+      lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: null })
+    });
+
+    const res = await request(app)
+      .post(`/api/posts/${postId}/draft/publish`)
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send();
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('HANDLE_REQUIRED');
+    expect(res.body.error).toBe('Handle required to publish');
   });
 });
 
@@ -222,10 +240,13 @@ describe('create route', () => {
       .send({ title: 'Hello', body: 'Hi' });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('HANDLE_REQUIRED');
+    expect(res.body.error).toBe('Handle required to publish');
   });
   test('extracts hashtags and tag endpoint lists the post', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
-    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
+    User.findById.mockReturnValue({
+      lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'tester' })
+    });
 
 
     let created;
@@ -277,7 +298,9 @@ describe('create route', () => {
 
     const user = { _id: new mongoose.Types.ObjectId(), email: 'c@e.com', role: 'user' };
 
-    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
+    User.findById.mockReturnValue({
+      lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'tester' })
+    });
     jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
 
     const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => ({
@@ -301,7 +324,9 @@ describe('create route', () => {
   test('accepts MJML content for body', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 'm@j.com', role: 'user' };
 
-    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
+    User.findById.mockReturnValue({
+      lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'tester' })
+    });
     jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
 
     const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => ({
@@ -326,7 +351,9 @@ describe('create route', () => {
   test('rejects invalid MJML content', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 'b@a.com', role: 'user' };
 
-    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
+    User.findById.mockReturnValue({
+      lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'tester' })
+    });
 
     const res = await request(app)
       .post('/api/posts')

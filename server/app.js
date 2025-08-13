@@ -74,7 +74,7 @@ app.use('/api/users', mediaRoutes);
 app.use('/api/comments', commentsRoutes);
 app.use('/', redirectRoutes);
 
-// Error handling
+// Error handling (must be registered after all routes)
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 8080;

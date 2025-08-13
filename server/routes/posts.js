@@ -1,19 +1,34 @@
 const express = require('express');
+const mongoose = require('mongoose');
+const User = require('../models/User');
 const Post = require('../models/Post');
-const PostDraft = require('../models/PostDraft');
-const Vote = require('../models/Vote');
 const Comment = require('../models/Comment');
+const Vote = require('../models/Vote');
+const PostDraft = require('../models/PostDraft');
 const auth = require('../middleware/auth');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
 const { normalize, extractHashtagsFromHtml, extractHashtagsFromText } = require('../utils/tags');
 const cheerio = require('cheerio');
-const mongoose = require('mongoose');
 const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
 const router = express.Router();
 
 function ttlDate() {
   const hours = Number(process.env.DRAFT_TTL_HOURS || 72);
   return new Date(Date.now() + hours * 3600 * 1000);
+}
+
+async function ensureHandleForPublish(req, res) {
+  if (!req.user) return { ok: false, code: 401, body: { error: 'Unauthorized' } };
+  const user = await User.findById(req.user.id).lean();
+  if (!user) return { ok: false, code: 401, body: { error: 'Unauthorized' } };
+  if (!user.handle) {
+    return {
+      ok: false,
+      code: 409,
+      body: { error: 'Handle required to publish', code: 'HANDLE_REQUIRED' },
+    };
+  }
+  return { ok: true, user };
 }
 
 // List posts
@@ -23,7 +38,6 @@ router.get('/', async (req, res, next) => {
     const filter = { status };
     if (req.query.authorHandle) {
       const h = String(req.query.authorHandle).toLowerCase();
-      const User = require('../models/User');
       const u = await User.findOne({ handle: h }).lean();
       if (!u) return res.json([]);
       filter.authorUserId = u._id;
@@ -63,11 +77,11 @@ router.post('/preview', auth(true), async (req, res, next) => {
 });
 
 // CREATE — single modal flow (title + body textarea) auto-detects (auth required)
-router.post('/', auth(true), async (req, res, next) => {
+router.post('/', auth(true), async (req, res) => {
   try {
+    const gate = await ensureHandleForPublish(req, res);
+    if (!gate.ok) return res.status(gate.code).json(gate.body);
     const { title, content = '', body = '', coverImage } = req.body || {};
-    const user = await User.findById(req.user.id).lean();
-    if (!user?.handle) return res.status(409).json({ error: "Handle required to publish", code: "HANDLE_REQUIRED" });
     if (!title) return res.status(400).json({ error: 'Title required' });
 
     // Prefer first non-empty field between `content` and `body`
@@ -136,7 +150,10 @@ router.post('/', auth(true), async (req, res, next) => {
     }
 
     res.status(201).json({ post: doc });
-  } catch (e) { next(e); }
+  } catch (e) {
+    req.log?.error?.(e);
+    res.status(500).json({ error: e.message || 'Server error' });
+  }
 });
 
 /**
@@ -302,10 +319,10 @@ router.delete('/:id/draft', auth(true), async (req, res, next) => {
 });
 
 // Publish draft: apply to live post and delete draft
-router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
+router.post('/:id/draft/publish', auth(true), async (req, res) => {
   try {
-      const user = await User.findById(req.user.id).lean();
-      if (!user?.handle) return res.status(409).json({ error: "Handle required to publish", code: "HANDLE_REQUIRED" });
+    const gate = await ensureHandleForPublish(req, res);
+    if (!gate.ok) return res.status(gate.code).json(gate.body);
     const { id } = req.params;
     let draft = await PostDraft.findOne({ user: req.user.id, post: id });
     if (!draft) return res.status(404).json({ error: 'No draft' });
@@ -358,7 +375,10 @@ router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
     await PostDraft.deleteOne({ _id: draft._id });
 
     res.json({ post });
-  } catch (e) { next(e); }
+  } catch (e) {
+    req.log?.error?.(e);
+    res.status(500).json({ error: e.message || 'Server error' });
+  }
 });
 
 /**
