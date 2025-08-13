@@ -11,7 +11,6 @@ export const api = axios.create({
 api.interceptors.request.use(cfg => {
   const token = localStorage.getItem('authToken')
   if (token) cfg.headers = { ...cfg.headers, Authorization: `Bearer ${token}` }
-  // Add client variant header
   cfg.headers = { ...cfg.headers, 'X-Client-Variant': getClientVariant() }
   return cfg
 })
