@@ -1,6 +1,5 @@
 import axios from 'axios'
 import type { Post } from '../types/post'
-import { getClientVariant } from './variant'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
@@ -11,7 +10,6 @@ export const api = axios.create({
 api.interceptors.request.use(cfg => {
   const token = localStorage.getItem('authToken')
   if (token) cfg.headers = { ...cfg.headers, Authorization: `Bearer ${token}` }
-  cfg.headers = { ...cfg.headers, 'X-Client-Variant': getClientVariant() }
   return cfg
 })
 

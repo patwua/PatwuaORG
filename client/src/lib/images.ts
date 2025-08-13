@@ -46,9 +46,7 @@ export function buildSrcSet(src: string, widths: number[]): string {
   return widths.map((w) => `${withTransform(src, { w })} ${w}w`).join(', ')
 }
 
-/** Reasonable default sizes for cover/content images */
-export function sizesFor(variant: 'desktop' | 'mobile-lite'): string {
-  return variant === 'mobile-lite'
-    ? '(max-width: 768px) 96vw, 640px'
-    : '(max-width: 1280px) 80vw, 1200px'
+export function sizesUniversal(): string {
+  // good defaults for cards/content: near full width on phones, constrained on larger screens
+  return '(max-width: 640px) 96vw, (max-width: 1024px) 85vw, 1200px'
 }
