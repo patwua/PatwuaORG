@@ -1,10 +1,11 @@
 const sanitizeHtml = require('sanitize-html');
 const mjml2html = require('mjml');
+const { minify } = require('html-minifier-terser');
 const cheerio = require('cheerio');
 
-const allowedTags = sanitizeHtml.defaults.allowedTags.concat([
+const baseAllowedTags = sanitizeHtml.defaults.allowedTags.concat([
   'img','table','thead','tbody','tfoot','tr','td','th',
-  'iframe','video','source','figure','figcaption','section','article','header','footer','style','p','div','span','h1','h2','h3','h4','h5','h6','html','head','body','title'
+  'iframe','video','source','figure','figcaption','section','article','header','footer','p','div','span','h1','h2','h3','h4','h5','h6','html','head','body','title'
 ]);
 
 const allowedAttributes = {
@@ -23,18 +24,25 @@ function transformTags(tagName, attribs) {
   return { tagName, attribs };
 }
 
-function sanitize(html) {
+function sanitize(html, { allowStyleTag = false } = {}) {
+  const allowedTags = allowStyleTag ? baseAllowedTags.concat(['style']) : baseAllowedTags;
   return sanitizeHtml(html, {
     allowedTags, allowedAttributes, transformTags,
     allowedSchemesByTag: { img: ['http','https','data'] },
-    disallowedTagsMode: 'discard'
+    disallowedTagsMode: 'discard',
+    ...(allowStyleTag ? { allowVulnerableTags: true } : {})
   });
 }
 
-function compileMjml(mjmlString) {
-  const { html, errors } = mjml2html(mjmlString, { minify: true, keepComments: false });
+async function compileMjml(mjmlString) {
+  const { html, errors } = mjml2html(mjmlString, { keepComments: false });
   if (errors?.length) throw new Error(errors.map(e => e.formattedMessage || e.message).join('\n'));
-  return html;
+  const compact = await minify(html, {
+    collapseWhitespace: true,
+    removeComments: true,
+    minifyCSS: false,
+  });
+  return compact;
 }
 
 function stripToText(html) {

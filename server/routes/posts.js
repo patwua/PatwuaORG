@@ -37,7 +37,8 @@ router.post('/preview', auth(true), async (req, res, next) => {
     let html = '';
     if (fmt === 'mjml') {
       try {
-        html = sanitize(compileMjml(raw));
+        const compiled = await compileMjml(raw);
+        html = sanitize(compiled, { allowStyleTag: true });
       } catch (err) {
         return res.status(400).json({ error: 'MJML error: ' + String(err.message || err) });
       }
@@ -87,7 +88,8 @@ router.post('/', auth(true), async (req, res, next) => {
 
     if (fmt === 'mjml') {
       try {
-        bodyHtml = sanitize(compileMjml(raw));
+        const compiled = await compileMjml(raw);
+        bodyHtml = sanitize(compiled, { allowStyleTag: true });
       } catch (err) {
         return res.status(400).json({ error: 'MJML error: ' + String(err.message || err) });
       }
@@ -365,37 +367,27 @@ router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
 
     // Content (compile/sanitize)
     if (draft.content) {
-      const fmt = detectFormat(draft.content);
-      if (fmt === 'mjml') {
-        let compiled;
-        try {
-          compiled = compileMjml(draft.content);
-        } catch (err) {
-          return res.status(400).json({ error: 'MJML error: ' + String(err.message || err) });
+        const fmt = detectFormat(draft.content);
+        if (fmt === 'mjml') {
+          let compiled;
+          try {
+            compiled = await compileMjml(draft.content);
+          } catch (err) {
+            return res.status(400).json({ error: 'MJML error: ' + String(err.message || err) });
+          }
+          post.bodyHtml = sanitize(compiled, { allowStyleTag: true });
+          post.body = stripToText(post.bodyHtml).slice(0, 800);
+          post.format = 'mjml';
+          post.sourceRaw = draft.content;
+        } else if (fmt === 'html') {
+          post.bodyHtml = sanitize(draft.content);
+          post.body = stripToText(post.bodyHtml).slice(0, 800);
+          post.format = 'html';
+          post.sourceRaw = draft.content;
+        } else {
+          return res.status(400).json({ error: 'Draft must be HTML or MJML' });
         }
-        post.bodyHtml = sanitize(compiled);
-        post.body = stripToText(post.bodyHtml).slice(0, 800);
-        post.format = 'mjml';
-        post.sourceRaw = draft.content;
-      } else if (fmt === 'html') {
-        post.bodyHtml = sanitize(draft.content);
-        post.body = stripToText(post.bodyHtml).slice(0, 800);
-        post.format = 'html';
-        post.sourceRaw = draft.content;
-      } else {
-        return res.status(400).json({ error: 'Draft must be HTML or MJML' });
       }
-
-      // media + cover (unless override)
-      const m = extractMedia(post.bodyHtml);
-      post.media = [
-        ...m.images.map(i => ({ kind:'image', url:i.url, alt:i.alt, width:i.width, height:i.height })),
-        ...m.videos.map(v => ({ kind:'video', url:v.url, poster:v.poster })),
-      ];
-      if (!draft.coverImage) {
-        post.coverImage = chooseCover(m) || undefined;
-      }
-    }
 
     // cover override
     if (draft.coverImage !== undefined) post.coverImage = draft.coverImage || undefined;
