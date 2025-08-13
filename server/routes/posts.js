@@ -66,6 +66,8 @@ router.post('/preview', auth(true), async (req, res, next) => {
 router.post('/', auth(true), async (req, res, next) => {
   try {
     const { title, content = '', body = '', coverImage } = req.body || {};
+    const user = await User.findById(req.user.id).lean();
+    if (!user?.handle) return res.status(409).json({ error: "Handle required to publish", code: "HANDLE_REQUIRED" });
     if (!title) return res.status(400).json({ error: 'Title required' });
 
     // Prefer first non-empty field between `content` and `body`
@@ -302,6 +304,8 @@ router.delete('/:id/draft', auth(true), async (req, res, next) => {
 // Publish draft: apply to live post and delete draft
 router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
   try {
+      const user = await User.findById(req.user.id).lean();
+      if (!user?.handle) return res.status(409).json({ error: "Handle required to publish", code: "HANDLE_REQUIRED" });
     const { id } = req.params;
     let draft = await PostDraft.findOne({ user: req.user.id, post: id });
     if (!draft) return res.status(404).json({ error: 'No draft' });

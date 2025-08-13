@@ -51,6 +51,7 @@ router.post('/google', async (req, res, next) => {
         id: String(user._id),
         email: user.email,
         role: user.role,
+        handle: user.handle || null,
         displayName: user.displayName,
         avatar: user.avatar || null,
         avatarUrl: user.avatarUrl || null

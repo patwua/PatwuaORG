@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { uploadToCloudinary } from '@/lib/upload';
 import { useAuth } from '@/context/AuthContext';
+import HandlePickerModal from './HandlePickerModal';
 import { isCloudinaryUrl, withTransform } from '@/lib/images'
 
 function localDetect(s: string): 'richtext'|'html'|'mjml' {
@@ -24,6 +25,8 @@ export default function PostEditor() {
   const [coverOverride, setCoverOverride] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHandlePicker, setShowHandlePicker] = useState(false);
+  const [pending, setPending] = useState<any | null>(null);
 
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -53,17 +56,45 @@ export default function PostEditor() {
 
   async function publish() {
     setBusy(true); setError(null);
+    const payload: any = { title, content };
+    if (coverOverride) payload.coverImage = coverOverride;
+    if (!user?.handle) {
+      setPending(payload);
+      setShowHandlePicker(true);
+      setBusy(false);
+      return;
+    }
     try {
-      const payload: any = { title, content };
-      if (coverOverride) payload.coverImage = coverOverride;
       const { data } = await api.post('/posts', payload);
       setOpen(false);
       resetAll();
       window.location.href = `/p/${data.post.slug}`;
     } catch (e:any) {
-      setError(getErr(e, 'Publish failed'))
+      if (e?.response?.data?.code === 'HANDLE_REQUIRED') {
+        setPending(payload);
+        setShowHandlePicker(true);
+      } else {
+        setError(getErr(e, 'Publish failed'))
+      }
     } finally { setBusy(false); }
   }
+
+  async function retryPublish() {
+    if (!pending) return;
+    setBusy(true); setError(null);
+    try {
+      const { data } = await api.post('/posts', pending);
+      setOpen(false);
+      resetAll();
+      window.location.href = `/p/${data.post.slug}`;
+    } catch (e:any) {
+      setError(getErr(e, 'Publish failed'));
+    } finally {
+      setBusy(false);
+      setPending(null);
+    }
+  }
+
 
   function insertAround(openTag: string, closeTag: string) {
     const el = bodyRef.current!;
@@ -230,6 +261,7 @@ export default function PostEditor() {
           </div>
         </div>
       )}
+      <HandlePickerModal open={showHandlePicker} onSaved={() => { setShowHandlePicker(false); retryPublish(); }} />
     </>
   );
 }

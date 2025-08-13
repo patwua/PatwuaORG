@@ -4,6 +4,7 @@ type User = {
   id: string
   email: string
   role: string
+  handle?: string
   displayName?: string
   avatar?: string | null
   avatarUrl?: string | null
