@@ -181,7 +181,8 @@ export default function App() {
           }
         />
         <Route path="/p/:slug" element={<PostDetailPage />} />
-        <Route path="/@:handle" element={<ProfilePage />} />
+        {/* Route for user profiles by handle (supports /@alice) */}
+        <Route path="/:handle" element={<ProfilePage />} />
         <Route path="/me" element={<MyProfile />} />
         <Route path="/tag/:tag" element={<TagPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
