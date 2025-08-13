@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import { Moon, SunMedium, PenSquare, ClipboardCheck } from 'lucide-react'
 import AdminReviewModal from './components/AdminReviewModal'
@@ -7,7 +7,6 @@ import PersonaSwitcher from './components/PersonaSwitcher'
 import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
 import AuthModal from './components/AuthModal'
-import PostEditor from './components/PostEditor'
 import ProfilePage from './pages/ProfilePage'
 import PostDetailPage from './pages/PostDetailPage'
 import TagPage from './pages/TagPage'
@@ -19,6 +18,11 @@ import { usePersona } from './context/PersonaContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 import TrendingTags from './components/TrendingTags'
+import QuickComposer from './components/QuickComposer'
+import VariantToggle from './components/common/VariantToggle'
+import { useVariant } from './context/VariantContext'
+
+const PostEditorLazy = lazy(() => import('./components/PostEditor'))
 
 function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona }: { onOpenAuth: () => void; onOpenReview: () => void; onOpenEditProfile: () => void; onOpenAddPersona: () => void }) {
   const { user, logout } = useAuth()
@@ -48,6 +52,7 @@ function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona 
         <button onClick={toggleTheme} className="ml-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Toggle theme">
           {dark ? <SunMedium className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
+        <VariantToggle />
         {user ? (
           <>
             <button onClick={() => navigate('/u/me')} className="text-sm underline hidden sm:inline">Hi, {user.displayName || user.email}</button>
@@ -83,6 +88,7 @@ function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona 
 
 export default function App() {
   usePersona()
+  const { actual } = useVariant()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -203,8 +209,14 @@ export default function App() {
         <Route path="/admin/users" element={<AdminUsersPage />} />
       </Routes>
 
-      <BottomNav />
-      <PostEditor />
+      {actual === 'mobile-lite' && <BottomNav />}
+      {actual === 'desktop' ? (
+        <Suspense fallback={null}>
+          <PostEditorLazy />
+        </Suspense>
+      ) : (
+        <QuickComposer />
+      )}
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       {showReview && <AdminReviewModal onClose={() => setShowReview(false)} />}
       {showAddPersona && <AddPersonaModal onClose={() => setShowAddPersona(false)} />}

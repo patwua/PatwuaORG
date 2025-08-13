@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext'
 import { PersonaProvider } from './context/PersonaContext'
 import { BrowserRouter } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import { VariantProvider } from './context/VariantContext'
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
@@ -15,7 +16,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <AuthProvider>
           <PersonaProvider>
-            <App />
+            <VariantProvider>
+              <App />
+            </VariantProvider>
           </PersonaProvider>
         </AuthProvider>
       </BrowserRouter>
