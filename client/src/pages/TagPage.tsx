@@ -5,7 +5,8 @@ import { votePost, normalizePost, api } from '../lib/api'
 import type { Post } from '../types/post'
 
 export default function TagPage() {
-  const { tag = '' } = useParams()
+  const { tag: rawTag = '' } = useParams()
+  const tag = rawTag.toLowerCase()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
