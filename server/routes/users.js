@@ -92,7 +92,6 @@ router.post('/handle', auth(true), async (req, res) => {
   if (!h || h.length < 3) return res.status(400).json({ error: 'Handle must be at least 3 characters' });
   if (RESERVED.has(h)) return res.status(400).json({ error: 'Handle is reserved' });
 
-  const reservedByUser = await HandleReservation.findOne({ handle: h, userId: user._id });
   const claimedByOther = await User.exists({ handle: h });
   const reservedByOther = await HandleReservation.findOne({ handle: h, userId: { $ne: user._id } });
 
@@ -102,7 +101,7 @@ router.post('/handle', auth(true), async (req, res) => {
   user.handle = h;
   if (typeof displayName === 'string') user.displayName = displayName;
   await user.save();
-  if (reservedByUser) await HandleReservation.deleteOne({ _id: reservedByUser._id });
+  await HandleReservation.deleteOne({ handle: h, userId: user._id });
 
   const publicUser = { id: user._id, email: user.email, handle: user.handle, displayName: user.displayName, avatar: user.avatar || null, avatarUrl: user.avatarUrl || null, role: user.role };
   res.json({ user: publicUser });
