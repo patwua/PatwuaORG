@@ -34,6 +34,10 @@ export default function PostEditor() {
     setDetected('richtext');
   }
 
+  function getErr(e: any, fallback: string) {
+    return e?.response?.data?.error || e?.response?.data?.message || e?.message || fallback
+  }
+
   async function doPreview() {
     setBusy(true); setError(null);
     try {
@@ -43,12 +47,7 @@ export default function PostEditor() {
       setVideos(data.media?.videos || []);
       setCoverSuggested(data.coverSuggested || null);
     } catch (e:any) {
-      setError(
-        e?.response?.data?.error ||
-        e?.response?.data?.message ||
-        e?.message ||
-        'Preview failed'
-      );
+      setError(getErr(e, 'Preview failed'))
     } finally { setBusy(false); }
   }
 
@@ -62,12 +61,7 @@ export default function PostEditor() {
       resetAll();
       window.location.href = `/p/${data.post.slug}`;
     } catch (e:any) {
-      setError(
-        e?.response?.data?.error ||
-        e?.response?.data?.message ||
-        e?.message ||
-        'Publish failed'
-      );
+      setError(getErr(e, 'Publish failed'))
     } finally { setBusy(false); }
   }
 

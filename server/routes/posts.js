@@ -4,7 +4,6 @@ const PostDraft = require('../models/PostDraft');
 const Vote = require('../models/Vote');
 const Comment = require('../models/Comment');
 const auth = require('../middleware/auth');
-const runTagAI = require('../utils/tagAI');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
 const { normalize, extractHashtagsFromHtml, extractHashtagsFromText } = require('../utils/tags');
 const cheerio = require('cheerio');
@@ -63,7 +62,7 @@ router.post('/preview', auth(true), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// CREATE — single modal flow (title + body textarea) auto-detects
+// CREATE — single modal flow (title + body textarea) auto-detects (auth required)
 router.post('/', auth(true), async (req, res, next) => {
   try {
     const { title, content = '', body = '', coverImage } = req.body || {};
@@ -106,6 +105,7 @@ router.post('/', auth(true), async (req, res, next) => {
     }
 
     const hashTags = bodyHtml ? extractHashtagsFromHtml(bodyHtml) : extractHashtagsFromText(bodyText);
+    const tags = normalize(hashTags);
 
     const type = Post.resolveTypeForRole(req.user.role);
     let postPayload = {
@@ -118,7 +118,7 @@ router.post('/', auth(true), async (req, res, next) => {
       type,
       coverImage: cover || undefined,
       media,
-      tags: hashTags,
+      tags,
     };
 
     let doc = await Post.create(postPayload);
@@ -132,15 +132,6 @@ router.post('/', auth(true), async (req, res, next) => {
       });
       await Post.findByIdAndUpdate(doc._id, { bodyHtml: $.html() });
     }
-
-    // Hashtag tags (+ optional AI) → normalized and saved async
-    setImmediate(async () => {
-      try {
-        const suggestions = await runTagAI({ title: doc.title, body: doc.body, html: doc.bodyHtml }) || [];
-        const final = normalize([ ...hashTags, ...suggestions ]);
-        await Post.findByIdAndUpdate(doc._id, { tags: final });
-      } catch {}
-    });
 
     res.status(201).json({ post: doc });
   } catch (e) { next(e); }
@@ -157,7 +148,7 @@ router.get('/slug/:slug', auth(false), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Upsert vote
+// Upsert vote (auth required)
 router.post('/:id/vote', auth(true), async (req, res, next) => {
   try {
     const { value } = req.body || {}; // -1, 0, 1
@@ -229,7 +220,7 @@ router.get('/:id/comments', auth(false), async (req, res, next) => {
   }
 });
 
-// add comment
+// add comment (auth required)
 router.post('/:id/comments', auth(true), async (req, res, next) => {
   try {
     const { body } = req.body || {};
@@ -359,14 +350,6 @@ router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
     post.editedBy = req.user.id;
     await post.save();
 
-    setImmediate(async () => {
-      try {
-        const suggestions = await runTagAI({ title: post.title, body: post.body, html: post.bodyHtml }) || [];
-        const final = normalize([ ...baseTags, ...hashTags, ...suggestions ]);
-        await Post.findByIdAndUpdate(post._id, { tags: final });
-      } catch {}
-    });
-
     // Cleanup draft
     await PostDraft.deleteOne({ _id: draft._id });
 
@@ -420,7 +403,7 @@ router.post('/:id/unarchive', auth(true), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// HARD DELETE a post and related records (ADMIN ONLY)
+// HARD DELETE a post and related records (admin/system_admin only, requires ?hard=true)
 // DELETE /api/posts/:id?hard=true
 router.delete('/:id', auth(true), async (req, res) => {
   try {

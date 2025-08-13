@@ -27,7 +27,15 @@ export default function PostContent({ post }: { post: Post }) {
     <div className="p-4">
       {post.coverImage && (
         <figure className="mb-4">
-          <img src={post.coverImage} alt="" className="w-full h-auto rounded-lg" />
+          <img
+            src={isCloudinaryUrl(post.coverImage) ? withTransform(post.coverImage, { w: 1200 }) : post.coverImage}
+            srcSet={isCloudinaryUrl(post.coverImage) ? buildSrcSet(post.coverImage, [480, 800, 1200]) : undefined}
+            sizes={isCloudinaryUrl(post.coverImage) ? sizesUniversal() : undefined}
+            alt=""
+            className="w-full h-auto rounded-lg"
+            loading="lazy"
+            decoding="async"
+          />
         </figure>
       )}
       {post.bodyHtml ? (

@@ -30,7 +30,8 @@ router.get('/trending', async (req, res) => {
 router.get('/:tag', async (req, res, next) => {
   try {
     const limit = Math.max(1, parseInt(req.query.limit, 10) || 50)
-    const t = normalizeTag(req.params.tag)
+    const raw = String(req.params.tag || '')
+    const t = normalizeTag(raw)
     if (!t) return res.json({ tag: t, posts: [] })
     const posts = await Post.find({ status: 'active', tags: t })
       .sort({ createdAt: -1 })

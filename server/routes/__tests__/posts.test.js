@@ -83,7 +83,7 @@ describe('archive and unarchive routes', () => {
   test('blocks unarchive for non-author non-system_admin', async () => {
     const postId = new mongoose.Types.ObjectId();
     const authorId = new mongoose.Types.ObjectId();
-    jest.spyOn(Post, 'findById').mockReturnValue({ lean: () => Promise.resolve({ _id: postId, author: authorId }) });
+    jest.spyOn(Post, 'findById').mockReturnValue({ lean: () => Promise.resolve({ _id: postId, authorUserId: authorId }) });
     const updateSpy = jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
 
     const admin = { _id: new mongoose.Types.ObjectId(), email: 'u@c.com', role: 'admin' };
@@ -99,7 +99,7 @@ describe('archive and unarchive routes', () => {
   test('author or system_admin can unarchive and clears fields', async () => {
     const postId = new mongoose.Types.ObjectId();
     const authorId = new mongoose.Types.ObjectId();
-    const postDoc = { _id: postId, author: authorId };
+    const postDoc = { _id: postId, authorUserId: authorId };
     jest.spyOn(Post, 'findById').mockReturnValue({ lean: () => Promise.resolve(postDoc) });
     const updateSpy = jest
       .spyOn(Post, 'findByIdAndUpdate')
@@ -143,7 +143,7 @@ describe('draft routes', () => {
 
     jest
       .spyOn(Post, 'findById')
-      .mockReturnValue({ lean: () => Promise.resolve({ _id: postId, author: user._id, title: 't' }) });
+      .mockReturnValue({ lean: () => Promise.resolve({ _id: postId, authorUserId: user._id, title: 't' }) });
     jest.spyOn(PostDraft, 'findOne').mockResolvedValue(null);
 
     let savedTags;
@@ -172,9 +172,8 @@ describe('draft routes', () => {
     jest.spyOn(PostDraft, 'findOne').mockResolvedValue(draft);
     jest.spyOn(PostDraft, 'deleteOne').mockResolvedValue({});
 
-    const postDoc = { _id: postId, author: user._id, save: jest.fn().mockResolvedValue(true), body: '', title: 't' };
+    const postDoc = { _id: postId, authorUserId: user._id, save: jest.fn().mockResolvedValue(true), body: '', title: 't' };
     jest.spyOn(Post, 'findById').mockResolvedValue(postDoc);
-    const updateSpy = jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
 
     const res = await request(app)
       .post(`/api/posts/${postId}/draft/publish`)
@@ -184,9 +183,6 @@ describe('draft routes', () => {
     expect(res.status).toBe(200);
     expect(postDoc.tags).toEqual(expect.arrayContaining(['custom', 'hello']));
 
-    await new Promise(r => setImmediate(r));
-    const finalTags = updateSpy.mock.calls[0][1].tags;
-    expect(finalTags).toEqual(expect.arrayContaining(['custom', 'hello']));
   });
 });
 
@@ -258,9 +254,6 @@ describe('create route', () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 'c@e.com', role: 'user' };
 
     jest
-      .spyOn(Persona, 'findOne')
-      .mockReturnValue({ lean: () => Promise.resolve(null) });
-    jest
       .spyOn(User, 'findById')
       .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
     jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
@@ -286,9 +279,6 @@ describe('create route', () => {
   test('accepts MJML content for body', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 'm@j.com', role: 'user' };
 
-    jest
-      .spyOn(Persona, 'findOne')
-      .mockReturnValue({ lean: () => Promise.resolve(null) });
     jest
       .spyOn(User, 'findById')
       .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
@@ -316,9 +306,6 @@ describe('create route', () => {
   test('rejects invalid MJML content', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 'b@a.com', role: 'user' };
 
-    jest
-      .spyOn(Persona, 'findOne')
-      .mockReturnValue({ lean: () => Promise.resolve(null) });
     jest
       .spyOn(User, 'findById')
       .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
