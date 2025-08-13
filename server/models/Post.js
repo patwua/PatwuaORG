@@ -3,7 +3,7 @@ const { shortSlug } = require('../utils/slug');
 
 const PostSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  slug: { type: String, index: true, unique: true, sparse: true },
+  slug: { type: String, unique: true, sparse: true }, // DB index enforces uniqueness
   body: { type: String, required: true }, // plain text or editor text
   bodyHtml: { type: String },             // sanitized HTML (for html/mjml posts)
   format: { type: String, enum: ['richtext','html','mjml'], default: 'richtext' },
