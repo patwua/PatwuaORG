@@ -461,4 +461,38 @@ router.post('/:id/unarchive', auth(true), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// HARD DELETE a post and related records (ADMIN ONLY)
+// DELETE /api/posts/:id?hard=true
+router.delete('/:id', auth(true), async (req, res) => {
+  try {
+    const hard = String(req.query.hard).toLowerCase() === 'true';
+    if (!hard) return res.status(400).json({ error: 'Use ?hard=true to permanently delete' });
+
+    if (!req.user || !['admin', 'system_admin'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid post id' });
+    }
+
+    const post = await Post.findById(id).lean();
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    // Cascade deletes
+    await Promise.all([
+      Comment.deleteMany({ post: id }),
+      Vote.deleteMany({ post: id }),
+      PostDraft.deleteMany({ post: id }),
+    ]);
+    const { deletedCount } = await Post.deleteOne({ _id: id });
+
+    return res.json({ ok: true, deletedPostId: id, deletedPost: !!deletedCount });
+  } catch (e) {
+    req.log?.error?.(e);
+    return res.status(500).json({ error: 'Failed to hard delete post' });
+  }
+});
+
 module.exports = router;
