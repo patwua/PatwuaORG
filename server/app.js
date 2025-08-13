@@ -10,6 +10,8 @@ const postsRoutes   = require('./routes/posts');
 const tagsRoutes    = require('./routes/tags');
 const reviewRoutes = require('./routes/review');
 const usersRoutes  = require('./routes/users');
+const commentsRoutes = require('./routes/comments');
+const mediaRoutes = require('./routes/media');
 const redirectRoutes = require('./routes/redirects');
 const PostDraft = require('./models/PostDraft');
 
@@ -68,6 +70,8 @@ app.use('/api/posts', postsRoutes);
 app.use('/api/tags', tagsRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/users', mediaRoutes);
+app.use('/api/comments', commentsRoutes);
 app.use('/', redirectRoutes);
 
 // Error handling

@@ -51,8 +51,9 @@ async function handle(res: Response) {
   return res.json()
 }
 
-export async function getPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/api/posts?status=active`)
+export async function getPosts(params: Record<string, any> = {}): Promise<Post[]> {
+  const search = new URLSearchParams({ status: 'active', ...Object.fromEntries(Object.entries(params).map(([k,v]) => [k, String(v)])) })
+  const res = await fetch(`${API_BASE}/api/posts?${search.toString()}`)
   const data = await handle(res)
   const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : []
   return list.map((p: any) =>

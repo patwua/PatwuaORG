@@ -181,7 +181,8 @@ export default function App() {
           }
         />
         <Route path="/p/:slug" element={<PostDetailPage />} />
-        <Route path="/@:slug" element={<ProfilePage />} />
+        <Route path="/@:handle" element={<ProfilePage />} />
+        <Route path="/me" element={<MyProfile />} />
         <Route path="/tag/:tag" element={<TagPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
       </Routes>
@@ -195,5 +196,22 @@ export default function App() {
       <HandlePickerModal />
     </div>
   )
+}
+
+function MyProfile() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (user?.handle) navigate(`/@${user.handle}`, { replace: true });
+  }, [user]);
+  if (!user?.handle) {
+    return (
+      <main className="mx-auto max-w-3xl p-4">
+        <p className="mb-4">You haven’t claimed a handle yet.</p>
+        <HandlePickerModal />
+      </main>
+    );
+  }
+  return null;
 }
 
