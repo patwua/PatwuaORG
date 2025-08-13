@@ -18,9 +18,6 @@ import { usePersona } from './context/PersonaContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 import TrendingTags from './components/TrendingTags'
-import QuickComposer from './components/QuickComposer'
-import VariantToggle from './components/common/VariantToggle'
-import { useVariant } from './context/VariantContext'
 
 const PostEditorLazy = lazy(() => import('./components/PostEditor'))
 
@@ -52,7 +49,6 @@ function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona 
         <button onClick={toggleTheme} className="ml-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Toggle theme">
           {dark ? <SunMedium className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
-        <VariantToggle />
         {user ? (
           <>
             <button onClick={() => navigate('/u/me')} className="text-sm underline hidden sm:inline">Hi, {user.displayName || user.email}</button>
@@ -88,7 +84,6 @@ function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona 
 
 export default function App() {
   usePersona()
-  const { actual } = useVariant()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -209,14 +204,10 @@ export default function App() {
         <Route path="/admin/users" element={<AdminUsersPage />} />
       </Routes>
 
-      {actual === 'mobile-lite' && <BottomNav />}
-      {actual === 'desktop' ? (
-        <Suspense fallback={null}>
-          <PostEditorLazy />
-        </Suspense>
-      ) : (
-        <QuickComposer />
-      )}
+      <BottomNav />
+      <Suspense fallback={null}>
+        <PostEditorLazy />
+      </Suspense>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       {showReview && <AdminReviewModal onClose={() => setShowReview(false)} />}
       {showAddPersona && <AddPersonaModal onClose={() => setShowAddPersona(false)} />}
