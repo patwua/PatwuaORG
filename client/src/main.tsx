@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client'
 import './styles/globals.css'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
-import { PersonaProvider } from './context/PersonaContext'
 import { BrowserRouter } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 
@@ -14,9 +13,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <GoogleOAuthProvider clientId={clientId}>
       <BrowserRouter>
         <AuthProvider>
-          <PersonaProvider>
-            <App />
-          </PersonaProvider>
+          <App />
         </AuthProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>

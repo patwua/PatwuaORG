@@ -2,10 +2,7 @@ const mongoose = require('mongoose');
 
 const CommentSchema = new mongoose.Schema({
   post: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', index: true, required: true },
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  personaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Persona' },
-  personaName: String,
-  personaAvatar: String,
+  authorUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   body: { type: String, required: true, trim: true, maxlength: 2000 },
   status: { type: String, enum: ['visible','hidden'], default: 'visible' },
 }, { timestamps: true });

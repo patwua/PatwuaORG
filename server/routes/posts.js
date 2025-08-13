@@ -1,6 +1,5 @@
 const express = require('express');
 const Post = require('../models/Post');
-const Persona = require('../models/Persona');
 const PostDraft = require('../models/PostDraft');
 const Vote = require('../models/Vote');
 const Comment = require('../models/Comment');
@@ -22,7 +21,15 @@ function ttlDate() {
 router.get('/', async (req, res, next) => {
   try {
     const status = (req.query.status || 'active').toString();
-    const posts = await Post.find({ status }).sort({ createdAt: -1 }).limit(50).lean();
+    const filter = { status };
+    if (req.query.authorHandle) {
+      const h = String(req.query.authorHandle).toLowerCase();
+      const User = require('../models/User');
+      const u = await User.findOne({ handle: h }).lean();
+      if (!u) return res.json([]);
+      filter.authorUserId = u._id;
+    }
+    const posts = await Post.find(filter).sort({ createdAt: -1 }).limit(50).lean();
     res.json(posts);
   } catch (e) { next(e); }
 });
@@ -59,25 +66,8 @@ router.post('/preview', auth(true), async (req, res, next) => {
 // CREATE — single modal flow (title + body textarea) auto-detects
 router.post('/', auth(true), async (req, res, next) => {
   try {
-    const { title, content = '', body = '', coverImage, personaId } = req.body || {};
+    const { title, content = '', body = '', coverImage } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
-
-    // persona handling (safe fallback)
-    const UserModel = require('../models/User');
-    let personaDoc = null;
-    if (personaId) {
-      personaDoc = await Persona.findOne({ _id: personaId, ownerUserId: req.user.id }).lean().catch(() => null);
-    }
-    if (!personaDoc) {
-      personaDoc = await Persona.findOne({ ownerUserId: req.user.id, isDefault: true }).lean();
-    }
-    let personaName = personaDoc?.name;
-    let personaAvatar = personaDoc?.avatar;
-    if (!personaDoc) {
-      const u = await UserModel.findById(req.user.id).lean();
-      personaName = u?.displayName || (u?.email ? u.email.split('@')[0] : 'Anonymous');
-      personaAvatar = u?.avatar || u?.avatarUrl || u?.googleAvatar || null;
-    }
 
     // Prefer first non-empty field between `content` and `body`
     const raw = [content, body].find(v => typeof v === 'string' && v.trim()) || '';
@@ -124,14 +114,11 @@ router.post('/', auth(true), async (req, res, next) => {
       bodyHtml,
       sourceRaw: bodyHtml ? raw : undefined,
       format: fmt,
-      author: req.user.id,
+      authorUserId: req.user.id,
       type,
       coverImage: cover || undefined,
       media,
       tags: hashTags,
-      personaId: personaDoc?._id || undefined,
-      personaName,
-      personaAvatar,
     };
 
     let doc = await Post.create(postPayload);
@@ -164,7 +151,7 @@ router.post('/', auth(true), async (req, res, next) => {
  */
 router.get('/slug/:slug', auth(false), async (req, res, next) => {
   try {
-    const post = await Post.findOne({ slug: req.params.slug }).populate('author', 'name email role').lean();
+    const post = await Post.findOne({ slug: req.params.slug }).populate('authorUserId', 'handle displayName avatar role').lean();
     if (!post) return res.status(404).json({ error: 'Not found' });
     res.json({ post });
   } catch (e) { next(e); }
@@ -245,29 +232,12 @@ router.get('/:id/comments', auth(false), async (req, res, next) => {
 // add comment
 router.post('/:id/comments', auth(true), async (req, res, next) => {
   try {
-    const { body, personaId } = req.body || {};
+    const { body } = req.body || {};
     if (!body || !String(body).trim()) return res.status(400).json({ error: 'Comment required' });
-    const PersonaModel = require('../models/Persona');
-    const UserModel = require('../models/User');
-    let persona = null;
-    if (personaId) {
-      persona = await PersonaModel.findOne({ _id: personaId, ownerUserId: req.user.id }).lean().catch(() => null);
-    }
-    if (!persona) persona = await PersonaModel.findOne({ ownerUserId: req.user.id, isDefault: true }).lean();
-    let personaName = persona?.name;
-    let personaAvatar = persona?.avatar;
-    if (!persona) {
-      const u = await UserModel.findById(req.user.id).lean();
-      personaName = u?.displayName || (u?.email ? u.email.split('@')[0] : 'Anonymous');
-      personaAvatar = u?.avatar || u?.avatarUrl || u?.googleAvatar || null;
-    }
 
     const c = await Comment.create({
       post: req.params.id,
-      user: req.user.id,
-      personaId: persona?._id,
-      personaName,
-      personaAvatar,
+      authorUserId: req.user.id,
       body: String(body).trim(),
     });
 
@@ -284,11 +254,11 @@ router.put('/:id/draft', auth(true), async (req, res, next) => {
     const post = await Post.findById(id).lean();
     if (!post) return res.status(404).json({ error: 'Not found' });
 
-    const canEdit = String(post.author) === String(req.user.id) || ['system_admin','admin'].includes(req.user.role);
+    const canEdit = String(post.authorUserId) === String(req.user.id) || ['system_admin','admin'].includes(req.user.role);
     if (!canEdit) return res.status(403).json({ error: 'Forbidden' });
 
-    const { title, content, tags = [], coverImage, personaId, rev } = req.body || {};
-    if (!content && !title && !tags && coverImage === undefined && !personaId) {
+    const { title, content, tags = [], coverImage, rev } = req.body || {};
+    if (!content && !title && !tags && coverImage === undefined) {
       return res.status(400).json({ error: 'Nothing to save' });
     }
 
@@ -296,13 +266,6 @@ router.put('/:id/draft', auth(true), async (req, res, next) => {
     const existing = await PostDraft.findOne({ user: req.user.id, post: id });
     if (existing && rev && existing.rev !== rev) {
       return res.status(409).json({ error: 'Draft has changed elsewhere', currentRev: existing.rev });
-    }
-
-    // Validate persona ownership (if provided)
-    let persona = null;
-    if (personaId) {
-      persona = await Persona.findOne({ _id: personaId, ownerUserId: req.user.id }).lean();
-      if (!persona) return res.status(400).json({ error: 'Invalid persona' });
     }
 
     const nextRev = (existing?.rev || 0) + 1;
@@ -314,7 +277,6 @@ router.put('/:id/draft', auth(true), async (req, res, next) => {
           content: content ?? existing?.content ?? '',
           tags: normalize(Array.isArray(tags) ? tags : existing?.tags ?? []),
           coverImage: coverImage !== undefined ? coverImage : (existing?.coverImage ?? post.coverImage ?? null),
-          personaId: persona?._id ?? existing?.personaId ?? post.personaId ?? null,
           updatedAt: new Date(),
           expiresAt: ttlDate(),
           rev: nextRev,
@@ -356,14 +318,11 @@ router.post('/:id/draft/publish', auth(true), async (req, res, next) => {
     const post = await Post.findById(id);
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
-    const canEdit = String(post.author) === String(req.user.id) || ['system_admin','admin'].includes(req.user.role);
+    const canEdit = String(post.authorUserId) === String(req.user.id) || ['system_admin','admin'].includes(req.user.role);
     if (!canEdit) return res.status(403).json({ error: 'Forbidden' });
 
     // Title
     if (draft.title) post.title = draft.title;
-
-    // Persona (optional)
-    if (draft.personaId) post.personaId = draft.personaId;
 
     // Content (compile/sanitize)
     if (draft.content) {
@@ -448,7 +407,7 @@ router.post('/:id/unarchive', auth(true), async (req, res, next) => {
     const post = await Post.findById(req.params.id).lean();
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
-    const isAuthor = String(post.author) === String(req.user.id);
+    const isAuthor = String(post.authorUserId) === String(req.user.id);
     const isSysAdmin = req.user.role === 'system_admin';
     if (!isAuthor && !isSysAdmin) return res.status(403).json({ error: 'Forbidden' });
 

@@ -16,7 +16,7 @@ const PostSchema = new mongoose.Schema({
     height: Number,
     poster: String,
   }],
-  author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  authorUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   type: { type: String, enum: ['news','vip','post','ads'], default: 'post' },
   status: { type: String, enum: ['active','archived'], default: 'active' },
   archivedReason: { type: String },
@@ -24,7 +24,7 @@ const PostSchema = new mongoose.Schema({
   archivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   tags: [{ type: String, index: true }],
   summaryAI: { type: String },
-  personaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Persona' },
+  // legacy persona snapshot fields (unused but kept for now)
   personaName: { type: String },
   personaAvatar: { type: String },
 }, { timestamps: true });
