@@ -54,7 +54,12 @@ export default function PostEditor() {
       setVideos(data.media?.videos || []);
       setCoverSuggested(data.coverSuggested || null);
     } catch (e:any) {
-      setError(e?.response?.data?.error || 'Preview failed');
+      setError(
+        e?.response?.data?.error ||
+        e?.response?.data?.message ||
+        e?.message ||
+        'Preview failed'
+      );
     } finally { setBusy(false); }
   }
 
@@ -69,7 +74,12 @@ export default function PostEditor() {
       resetAll();
       window.location.href = `/p/${data.post.slug}`;
     } catch (e:any) {
-      setError(e?.response?.data?.error || 'Publish failed');
+      setError(
+        e?.response?.data?.error ||
+        e?.response?.data?.message ||
+        e?.message ||
+        'Publish failed'
+      );
     } finally { setBusy(false); }
   }
 
