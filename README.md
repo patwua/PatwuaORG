@@ -149,6 +149,12 @@ npm run client      # run React dev server
 - `npm test` from the `server/` directory runs Jest route tests.
 - `npm test` from the `client/` directory runs Vitest unit tests.
 
+## Migrations
+
+The server runs a safe, idempotent migration on boot (controlled by `AUTO_RUN_MIGRATIONS=true`).
+It drops a legacy `path_1` index, unsets any `path` fields, migrates `author` → `authorUserId`,
+and creates a partial-unique `slug` index. Set `AUTO_RUN_MIGRATIONS=false` to disable.
+
 ## Deployment
 
 - Backend env: include `https://patwuaorg.onrender.com` in `ALLOWED_ORIGIN`.

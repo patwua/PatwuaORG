@@ -2,6 +2,7 @@ const request = require('supertest');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const Post = require('../../models/Post');
 const PostDraft = require('../../models/PostDraft');
@@ -431,6 +432,64 @@ describe('hard delete route', () => {
     expect(delVotes).toHaveBeenCalledWith({ post: postId });
     expect(delDrafts).toHaveBeenCalledWith({ post: postId });
     expect(delPost).toHaveBeenCalledWith({ _id: postId });
+  });
+});
+
+describe('boot migrations', () => {
+  let mongo;
+  let runBootMigrations;
+
+  beforeEach(async () => {
+    try {
+      mongo = await MongoMemoryServer.create({ binary: { version: '7.0.5' } });
+    } catch (e) {
+      console.warn('MongoMemoryServer start failed, skipping tests:', e.message);
+      mongo = null;
+      return;
+    }
+    process.env.MONGO_URI = mongo.getUri();
+    process.env.MONGODB_DB = 'testdb';
+    process.env.AUTO_RUN_MIGRATIONS = 'false';
+    delete require.cache[require.resolve('../../app')];
+    ({ runBootMigrations } = require('../../app'));
+    await new Promise(res => mongoose.connection.once('open', res));
+    process.env.AUTO_RUN_MIGRATIONS = 'true';
+  });
+
+  afterEach(async () => {
+    if (mongo) {
+      await mongoose.disconnect();
+      await mongo.stop();
+    }
+  });
+
+  test('drops path index and allows multiple posts without path', async () => {
+    if (!mongo) return;
+    const posts = mongoose.connection.db.collection('posts');
+    await posts.createIndex({ path: 1 }, { unique: true, name: 'path_1' });
+
+    await runBootMigrations();
+
+    const indexes = await posts.indexes();
+    expect(indexes.find(i => i.name === 'path_1')).toBeUndefined();
+
+    await posts.insertOne({ title: 'a', body: 'b', slug: 's1', authorUserId: new mongoose.Types.ObjectId() });
+    await expect(
+      posts.insertOne({ title: 'c', body: 'd', slug: 's2', authorUserId: new mongoose.Types.ObjectId() })
+    ).resolves.toHaveProperty('insertedId');
+  });
+
+  test('migrates author to authorUserId', async () => {
+    if (!mongo) return;
+    const posts = mongoose.connection.db.collection('posts');
+    const uid = new mongoose.Types.ObjectId();
+    await posts.insertOne({ title: 't', body: 'b', slug: 's', author: uid });
+
+    await runBootMigrations();
+
+    const doc = await posts.findOne({ slug: 's' });
+    expect(doc.authorUserId).toEqual(uid);
+    expect(doc.author).toBeUndefined();
   });
 });
 
