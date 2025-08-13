@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { CheckCheck, ArrowBigUp, ArrowBigDown, MessageSquareText, Bookmark, Share2 } from 'lucide-react'
 import TagChips from './TagChips'
 import type { Post } from '../types/post'
+import { useVariant } from '@/context/VariantContext'
+import { isCloudinaryUrl, withTransform, buildSrcSet, sizesFor } from '@/lib/images'
 
 export default function PostCard({
   post,
@@ -14,6 +16,8 @@ export default function PostCard({
   const [relative, setRelative] = useState<string>('just now')
   const [pending, setPending] = useState<'up' | 'down' | null>(null)
   const [optimistic, setOptimistic] = useState<number | null>(null)
+  const { actual } = useVariant()
+  const cover = (post as any).coverUrl || post.coverImage || (post.media?.[0]?.url as string | undefined)
   useEffect(() => {
     if (!post.createdAt) return
     const then = new Date(post.createdAt)
@@ -44,9 +48,28 @@ export default function PostCard({
 
   return (
     <article className="card card-hover overflow-hidden">
-      {post.coverImage && (
-        <Link to={post.slug ? `/p/${post.slug}` : '#'} className="block aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
-          <img src={post.coverImage} alt="" className="h-full w-full object-cover" loading="lazy" />
+      {cover && (
+        <Link
+          to={post.slug ? `/p/${post.slug}` : '#'}
+          className="block aspect-video w-full overflow-hidden rounded-lg bg-gray-100"
+        >
+          <img
+            className="h-full w-full object-cover"
+            alt={post.title || 'cover image'}
+            loading="lazy"
+            decoding="async"
+            src={
+              isCloudinaryUrl(cover)
+                ? withTransform(cover, { w: actual === 'mobile-lite' ? 640 : 1200 })
+                : cover
+            }
+            srcSet={
+              isCloudinaryUrl(cover)
+                ? buildSrcSet(cover, actual === 'mobile-lite' ? [320, 480, 640] : [480, 800, 1200])
+                : undefined
+            }
+            sizes={isCloudinaryUrl(cover) ? sizesFor(actual) : undefined}
+          />
         </Link>
       )}
       <div className="p-4 md:p-5">

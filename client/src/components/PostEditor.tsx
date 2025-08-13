@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { uploadToCloudinary } from '@/lib/upload';
 import { useAuth } from '@/context/AuthContext';
+import { isCloudinaryUrl, withTransform } from '@/lib/images'
 
 type Persona = { _id: string; name: string };
 
@@ -197,20 +198,34 @@ export default function PostEditor() {
                   <div className="mt-3">
                     <div className="text-sm font-medium mb-1">Pick cover image</div>
                     <div className="flex flex-wrap gap-3">
-                      {images.map((img, i) => (
-                        <button key={`img-${i}`} onClick={() => setCoverOverride(img.url || null)}
-                          className={`border rounded overflow-hidden ${cover === img.url ? 'ring-2 ring-red-500' : ''}`}>
-                          {/* eslint-disable-next-line jsx-a11y/alt-text */}
-                          <img src={img.url} className="h-20 w-28 object-cover" />
-                        </button>
-                      ))}
-                      {videos.filter(v => v.poster).map((v, i) => (
-                        <button key={`vid-${i}`} onClick={() => setCoverOverride(v.poster!)}
-                          className={`border rounded overflow-hidden ${cover === v.poster ? 'ring-2 ring-red-500' : ''}`}>
-                          {/* eslint-disable-next-line jsx-a11y/alt-text */}
-                          <img src={v.poster!} className="h-20 w-28 object-cover" />
-                        </button>
-                      ))}
+                      {images.map((img, i) => {
+                        const url = img.url || ''
+                        const thumb = isCloudinaryUrl(url) ? withTransform(url, { w: 160 }) : url
+                        return (
+                          <button
+                            key={`img-${i}`}
+                            onClick={() => setCoverOverride(img.url || null)}
+                            className={`border rounded overflow-hidden ${cover === img.url ? 'ring-2 ring-red-500' : ''}`}
+                          >
+                            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                            <img src={thumb} className="h-20 w-28 object-cover" loading="lazy" />
+                          </button>
+                        )
+                      })}
+                      {videos.filter(v => v.poster).map((v, i) => {
+                        const url = v.poster!
+                        const thumb = isCloudinaryUrl(url) ? withTransform(url, { w: 160 }) : url
+                        return (
+                          <button
+                            key={`vid-${i}`}
+                            onClick={() => setCoverOverride(v.poster!)}
+                            className={`border rounded overflow-hidden ${cover === v.poster ? 'ring-2 ring-red-500' : ''}`}
+                          >
+                            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                            <img src={thumb} className="h-20 w-28 object-cover" loading="lazy" />
+                          </button>
+                        )
+                      })}
                       {coverOverride && (
                         <button onClick={() => setCoverOverride(null)} className="px-3 py-2 border rounded text-sm">
                           Use suggested cover
