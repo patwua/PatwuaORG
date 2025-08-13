@@ -30,6 +30,12 @@ export default function PostEditor() {
 
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
 
+  useEffect(() => {
+    const open = () => setOpen(true);
+    window.addEventListener('open-post-editor', open);
+    return () => window.removeEventListener('open-post-editor', open);
+  }, []);
+
 
   function resetAll() {
     setTitle(''); setContent(''); setPreviewHtml(null); setCoverSuggested(null);

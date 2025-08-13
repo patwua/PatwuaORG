@@ -99,4 +99,22 @@ function chooseCover({ images, videos }) {
   return null;
 }
 
-module.exports = { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover };
+function rewriteJoinCTA(html = '') {
+  if (!html) return html;
+  const $ = cheerio.load(html);
+  $('a[href="[[POST_URL]]"], a[data-cta="join"]').each((_, el) => {
+    const $el = $(el);
+    $el.attr('href', '/');
+    $el.removeAttr('target');
+    const rel = ($el.attr('rel') || '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter(r => r !== 'noreferrer');
+    if (!rel.includes('noopener')) rel.push('noopener');
+    if (rel.length) $el.attr('rel', rel.join(' '));
+    else $el.removeAttr('rel');
+  });
+  return $.html();
+}
+
+module.exports = { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover, rewriteJoinCTA };

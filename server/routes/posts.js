@@ -6,10 +6,8 @@ const Comment = require('../models/Comment');
 const Vote = require('../models/Vote');
 const PostDraft = require('../models/PostDraft');
 const auth = require('../middleware/auth');
-const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover } = require('../utils/html');
+const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover, rewriteJoinCTA } = require('../utils/html');
 const { normalize, extractHashtagsFromHtml, extractHashtagsFromText } = require('../utils/tags');
-const cheerio = require('cheerio');
-const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
 const router = express.Router();
 const attachAuthors = require('./attachAuthors');
 
@@ -45,6 +43,9 @@ router.get('/', async (req, res, next) => {
     }
     const posts = await Post.find(filter).sort({ createdAt: -1 }).limit(50).lean();
     await attachAuthors(posts);
+    for (const p of posts) {
+      if (p.bodyHtml) p.bodyHtml = rewriteJoinCTA(p.bodyHtml);
+    }
     res.json(posts);
   } catch (e) { next(e); }
 });
@@ -141,14 +142,13 @@ router.post('/', auth(true), async (req, res) => {
 
     let doc = await Post.create(postPayload);
 
-    // CTA token replacement: [[POST_URL]]
+    // CTA token replacement: [[POST_URL]] or data-cta="join"
     if (doc.bodyHtml) {
-      const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
-      const $ = cheerio.load(doc.bodyHtml);
-      $('a[href="[[POST_URL]]"], a[data-cta="join"]').each((_, el) => {
-        $(el).attr('href', `${SITE}/p/${doc.slug}`).attr('target','_self').attr('rel','noopener');
-      });
-      await Post.findByIdAndUpdate(doc._id, { bodyHtml: $.html() });
+      const updated = rewriteJoinCTA(doc.bodyHtml);
+      if (updated !== doc.bodyHtml) {
+        await Post.findByIdAndUpdate(doc._id, { bodyHtml: updated });
+        doc.bodyHtml = updated;
+      }
     }
 
     await attachAuthors(doc);
@@ -167,6 +167,7 @@ router.get('/slug/:slug', auth(false), async (req, res, next) => {
     const post = await Post.findOne({ slug: req.params.slug }).lean();
     if (!post) return res.status(404).json({ error: 'Not found' });
     await attachAuthors(post);
+    if (post.bodyHtml) post.bodyHtml = rewriteJoinCTA(post.bodyHtml);
     res.json({ post });
   } catch (e) { next(e); }
 });

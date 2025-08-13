@@ -64,7 +64,7 @@ export default function ProfilePage() {
   if (error) return <div className="p-4">User not found.</div>;
   if (!user) return <div className="p-4">Loading…</div>;
 
-  const isOwner = auth?.handle === user.handle;
+  const isOwner = auth?.id === user.id;
 
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-6">
@@ -82,7 +82,15 @@ export default function ProfilePage() {
           </div>
         </div>
         {isOwner && (
-          <button className="px-3 py-1 border rounded" onClick={() => setShowEdit(true)}>Edit Profile</button>
+          <div className="flex gap-2">
+            <button className="px-3 py-1 border rounded" onClick={() => setShowEdit(true)}>Edit Profile</button>
+            <button
+              className="px-3 py-1 border rounded"
+              onClick={() => window.dispatchEvent(new Event('open-post-editor'))}
+            >
+              New Post
+            </button>
+          </div>
         )}
       </header>
 

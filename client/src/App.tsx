@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Link, useNavigate } from 'react-router-dom'
-import { Moon, SunMedium, PenSquare } from 'lucide-react'
+import { Moon, SunMedium, User } from 'lucide-react'
 import Search from './components/Search'
 import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
@@ -9,16 +9,16 @@ import ProfilePage from './pages/ProfilePage'
 import PostDetailPage from './pages/PostDetailPage'
 import TagPage from './pages/TagPage'
 import AdminUsersPage from './pages/AdminUsersPage'
-import EditProfileModal from './components/EditProfileModal'
 import HandlePickerModal from './components/HandlePickerModal'
 import { useAuth } from './context/AuthContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 import TrendingTags from './components/TrendingTags'
+import { avatarUrl } from './lib/upload'
 
 const PostEditorLazy = lazy(() => import('./components/PostEditor'))
 
-function Header({ onOpenAuth, onOpenEditProfile }: { onOpenAuth: () => void; onOpenEditProfile: () => void }) {
+function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [dark, setDark] = useState(false)
@@ -45,20 +45,24 @@ function Header({ onOpenAuth, onOpenEditProfile }: { onOpenAuth: () => void; onO
         <button onClick={toggleTheme} className="ml-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Toggle theme">
           {dark ? <SunMedium className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
-        {user ? (
-          <>
-            <button onClick={() => navigate(user.handle ? `/@${user.handle}` : '/')} className="text-sm underline hidden sm:inline">Hi, {user.displayName || user.email}</button>
-            <button onClick={onOpenEditProfile} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
-              Edit Profile
-            </button>
-            <button onClick={logout} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
-              Logout
-            </button>
-          </>
-        ) : (
-          <button onClick={onOpenAuth} className="ml-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-600 text-white hover:bg-orange-700">
-            <PenSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">Sign in</span>
+        <button
+          onClick={() => (user ? navigate('/me') : onOpenAuth())}
+          className="ml-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          aria-label="User menu"
+        >
+          {user?.avatar || user?.avatarUrl ? (
+            <img
+              src={avatarUrl(user.avatar || user.avatarUrl || '')}
+              alt="profile"
+              className="h-8 w-8 rounded-full object-cover"
+            />
+          ) : (
+            <User className="h-5 w-5" />
+          )}
+        </button>
+        {user && (
+          <button onClick={logout} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
+            Logout
           </button>
         )}
       </div>
@@ -72,7 +76,6 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAuth, setShowAuth] = useState(false)
-  const [showEditProfile, setShowEditProfile] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -116,7 +119,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
-      <Header onOpenAuth={() => setShowAuth(true)} onOpenEditProfile={() => setShowEditProfile(true)} />
+      <Header onOpenAuth={() => setShowAuth(true)} />
       <section className="bg-gradient-to-br from-orange-100 via-amber-50 to-white dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 border-b border-orange-100/70 dark:border-neutral-800">
         <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Where Every Voice Has a Place</h1>
@@ -181,8 +184,8 @@ export default function App() {
           }
         />
         <Route path="/p/:slug" element={<PostDetailPage />} />
-        {/* Route for user profiles by handle (supports /@alice) */}
-        <Route path="/:handle" element={<ProfilePage />} />
+        {/* Route for user profiles, only accessible via @handle */}
+        <Route path="/@:handle" element={<ProfilePage />} />
         <Route path="/me" element={<MyProfile />} />
         <Route path="/tag/:tag" element={<TagPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
@@ -193,7 +196,6 @@ export default function App() {
         <PostEditorLazy />
       </Suspense>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-      {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
       <HandlePickerModal />
     </div>
   )
