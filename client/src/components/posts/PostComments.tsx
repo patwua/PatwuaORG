@@ -56,7 +56,7 @@ export default function PostComments({ post }: { post: Post }) {
                         {c.authorUserId.displayName || '@' + c.authorUserId.handle}
                       </a>
                     ) : (
-                      c.authorUserId?.displayName || 'User'
+                      c.authorUserId?.displayName || c.authorUserId?.email?.split('@')[0] || 'User'
                     )}
                   </p>
                   <p className="text-gray-800 dark:text-gray-200 mt-1">{c.body}</p>

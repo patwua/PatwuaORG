@@ -8,6 +8,9 @@ const UserSchema = new mongoose.Schema({
   avatar: String,
   avatarUrl: String,
   googleAvatar: String,
+  bio: { type: String },
+  location: { type: String },
+  links: [{ label: String, url: String }],
 }, { timestamps: true });
 
 // ensure unique index on handle

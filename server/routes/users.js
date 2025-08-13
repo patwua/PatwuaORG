@@ -18,7 +18,10 @@ router.get('/me', auth(true), async (req, res, next) => {
         handle: u.handle || null,
         displayName: u.displayName,
         avatar: u.avatar || null,
-        avatarUrl: u.avatarUrl || null
+        avatarUrl: u.avatarUrl || null,
+        bio: u.bio || null,
+        location: u.location || null,
+        links: u.links || [],
       }
     });
   } catch (e) { next(e); }
@@ -27,11 +30,22 @@ router.get('/me', auth(true), async (req, res, next) => {
 // update my profile
 router.put('/me', auth(true), async (req, res, next) => {
   try {
-    const { displayName, avatar, avatarUrl } = req.body || {};
+    const { displayName, avatar, avatarUrl, bio, location, links } = req.body || {};
     const update = {};
     if (typeof displayName === 'string') update.displayName = displayName.trim().slice(0, 80);
     if (typeof avatar === 'string') update.avatar = avatar.trim();
     if (typeof avatarUrl === 'string') update.avatarUrl = avatarUrl.trim();
+    if (typeof bio === 'string') update.bio = bio.trim().slice(0, 500);
+    if (typeof location === 'string') update.location = location.trim().slice(0, 100);
+    if (Array.isArray(links)) {
+      update.links = links
+        .filter(l => l && typeof l.label === 'string' && typeof l.url === 'string')
+        .map(l => ({
+          label: l.label.trim().slice(0,50),
+          url: /^https?:\/\//i.test(l.url) ? l.url.trim() : undefined,
+        }))
+        .filter(l => l.url);
+    }
 
     await User.updateOne({ _id: req.user.id }, { $set: update });
     const u = await User.findById(req.user.id).lean();
@@ -43,7 +57,10 @@ router.put('/me', auth(true), async (req, res, next) => {
         handle: u.handle || null,
         displayName: u.displayName,
         avatar: u.avatar || null,
-        avatarUrl: u.avatarUrl || null
+        avatarUrl: u.avatarUrl || null,
+        bio: u.bio || null,
+        location: u.location || null,
+        links: u.links || [],
       }
     });
   } catch (e) { next(e); }
@@ -103,9 +120,35 @@ router.get('/by-handle/:handle', async (req, res, next) => {
         handle: user.handle,
         displayName: user.displayName || null,
         avatar: user.avatar || null,
+        bio: user.bio || null,
+        location: user.location || null,
+        links: user.links || [],
         role: user.role,
+        createdAt: user.createdAt,
       }
     });
+  } catch (e) { next(e); }
+});
+
+// public counts for user
+router.get('/by-handle/:handle/counts', async (req, res, next) => {
+  try {
+    const h = String(req.params.handle || '').toLowerCase();
+    const user = await User.findOne({ handle: h }).lean();
+    if (!user) return res.status(404).json({ error: 'Not found' });
+    const Post = require('../models/Post');
+    const Comment = require('../models/Comment');
+    const Vote = require('../models/Vote');
+    const [posts, comments] = await Promise.all([
+      Post.countDocuments({ authorUserId: user._id, status: { $ne: 'archived' } }),
+      Comment.countDocuments({ authorUserId: user._id }),
+    ]);
+    const postIds = await Post.find({ authorUserId: user._id }).select('_id').lean();
+    const ids = postIds.map(p => p._id);
+    const upvotes = ids.length
+      ? await Vote.countDocuments({ post: { $in: ids }, value: 1 })
+      : 0;
+    res.json({ posts, comments, upvotes });
   } catch (e) { next(e); }
 });
 

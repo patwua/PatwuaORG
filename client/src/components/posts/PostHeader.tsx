@@ -15,7 +15,7 @@ export default function PostHeader({ author, timestamp }: { author: any; timesta
               {author.displayName || '@' + author.handle}
             </a>
           ) : (
-            <h3 className="font-medium">{author?.displayName || 'Unknown'}</h3>
+            <h3 className="font-medium">{author?.displayName || author?.email?.split('@')[0] || 'Unknown'}</h3>
           )}
           {author?.verified && <VerifiedBadge />}
         </div>
