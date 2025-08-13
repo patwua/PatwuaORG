@@ -1,6 +1,8 @@
 const express = require('express');
 const auth = require('../middleware/auth');
 const User = require('../models/User');
+const HandleReservation = require('../models/HandleReservation');
+const { normalizeHandle, proposeAndReserve, RESERVED } = require('../utils/handle');
 
 const router = express.Router();
 
@@ -13,6 +15,7 @@ router.get('/me', auth(true), async (req, res, next) => {
         id: String(u._id),
         email: u.email,
         role: u.role,
+        handle: u.handle || null,
         displayName: u.displayName,
         avatar: u.avatar || null,
         avatarUrl: u.avatarUrl || null
@@ -37,6 +40,7 @@ router.put('/me', auth(true), async (req, res, next) => {
         id: String(u._id),
         email: u.email,
         role: u.role,
+        handle: u.handle || null,
         displayName: u.displayName,
         avatar: u.avatar || null,
         avatarUrl: u.avatarUrl || null
@@ -45,44 +49,46 @@ router.put('/me', auth(true), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// set handle (one-time)
-router.post('/handle', auth(true), async (req, res, next) => {
-  try {
-    const { handle, displayName } = req.body || {};
-    const force = req.query.force === '1' && req.user.role === 'admin';
+// suggest a handle and reserve it temporarily
+router.get('/handle-suggestion', auth(true), async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await User.findById(req.user.id).lean();
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (user.handle) return res.json({ suggestion: user.handle, alreadySet: true });
+  const suggestion = await proposeAndReserve(user, { seeds: [], days: Number(process.env.HANDLE_RESERVE_DAYS || 30) });
+  res.json({ suggestion });
+});
 
-    const norm = String(handle || '').toLowerCase().trim();
-    if (!/^[a-z0-9_.-]{3,30}$/.test(norm)) {
-      return res.status(400).json({ error: 'Invalid handle' });
-    }
-    const reserved = ['admin','administrator','root','support','about','help','tag','tags','p','u','me','api','auth','static','assets'];
-    if (reserved.includes(norm)) {
-      return res.status(400).json({ error: 'Handle reserved' });
-    }
+// claim a handle
+router.post('/handle', auth(true), async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  const { handle, displayName } = req.body || {};
+  const force = String(req.query.force || '') === '1';
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const user = await User.findById(req.user.id);
-    if (user.handle && !force) {
-      return res.status(400).json({ error: 'Handle already set' });
-    }
-    const existing = await User.findOne({ handle: norm });
-    if (existing && String(existing._id) !== String(user._id)) {
-      return res.status(400).json({ error: 'Handle taken' });
-    }
-    user.handle = norm;
-    if (typeof displayName === 'string') user.displayName = displayName.trim();
-    await user.save();
-    res.json({
-      user: {
-        id: String(user._id),
-        email: user.email,
-        role: user.role,
-        handle: user.handle,
-        displayName: user.displayName,
-        avatar: user.avatar || null,
-        avatarUrl: user.avatarUrl || null,
-      }
-    });
-  } catch (e) { next(e); }
+  if (user.handle && !force) {
+    return res.status(409).json({ error: 'Handle already set and immutable' });
+  }
+
+  const h = normalizeHandle(handle);
+  if (!h || h.length < 3) return res.status(400).json({ error: 'Handle must be at least 3 characters' });
+  if (RESERVED.has(h)) return res.status(400).json({ error: 'Handle is reserved' });
+
+  const reservedByUser = await HandleReservation.findOne({ handle: h, userId: user._id });
+  const claimedByOther = await User.exists({ handle: h });
+  const reservedByOther = await HandleReservation.findOne({ handle: h, userId: { $ne: user._id } });
+
+  if (claimedByOther) return res.status(409).json({ error: 'Handle already taken' });
+  if (reservedByOther) return res.status(409).json({ error: 'Handle temporarily reserved by another user' });
+
+  user.handle = h;
+  if (typeof displayName === 'string') user.displayName = displayName;
+  await user.save();
+  if (reservedByUser) await HandleReservation.deleteOne({ _id: reservedByUser._id });
+
+  const publicUser = { id: user._id, email: user.email, handle: user.handle, displayName: user.displayName, avatar: user.avatar || null, avatarUrl: user.avatarUrl || null, role: user.role };
+  res.json({ user: publicUser });
 });
 
 // lookup by handle

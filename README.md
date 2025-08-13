@@ -129,6 +129,12 @@ The client uses React components organized by feature (posts, layout, UI, etc.) 
 - **Routes ↔ Models:** Express routes import Mongoose models to persist and query data. For example, `posts.js` interacts with `Post`, `PostDraft`, and others to handle post creation and moderation.
 - **Utilities:** Shared logic like slug generation, tag extraction, and HTML sanitization lives in `server/utils` and is leveraged by routes and models.
 
+## Identity & Handles
+
+- Users may sign in and comment without picking a handle.
+- Publishing a post requires setting a unique handle first.
+- Handle suggestions are reserved for a limited time (TTL) via `HANDLE_RESERVE_DAYS` (default **30** days) and released automatically when expired.
+
 ## Running locally
 
 From the repository root:
@@ -146,4 +152,5 @@ npm run client      # run React dev server
 ## Deployment
 
 - Backend env: include `https://patwuaorg.onrender.com` in `ALLOWED_ORIGIN`.
+- Backend env: `HANDLE_RESERVE_DAYS` sets reservation TTL (default 30).
 - Frontend (Render Static Site): add rewrite `/* -> /index.html` with status 200.

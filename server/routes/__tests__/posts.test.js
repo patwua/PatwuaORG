@@ -32,6 +32,10 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+beforeEach(() => {
+  jest.spyOn(User, 'findById').mockImplementation(id => ({ lean: () => Promise.resolve({ _id: id, email: 'x', handle: 'h' }) }));
+});
+
 describe('archive and unarchive routes', () => {
   test('denies archive for non-privileged roles', async () => {
     const postId = new mongoose.Types.ObjectId();
@@ -140,6 +144,12 @@ describe('draft routes', () => {
   test('normalizes tags on save', async () => {
     const postId = new mongoose.Types.ObjectId();
     const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
+    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
+
+
+    jest
+      .spyOn(User, "findById")
+      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: "h" }) });
 
     jest
       .spyOn(Post, 'findById')
@@ -167,6 +177,8 @@ describe('draft routes', () => {
   test('publishing draft merges saved tags with hashtags', async () => {
     const postId = new mongoose.Types.ObjectId();
     const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
+    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
+
 
     const draft = { _id: new mongoose.Types.ObjectId(), content: '<p>#Hello world</p>', tags: ['custom'] };
     jest.spyOn(PostDraft, 'findOne').mockResolvedValue(draft);
@@ -201,8 +213,20 @@ describe('preview route', () => {
 });
 
 describe('create route', () => {
+  test('requires handle to publish', async () => {
+    const user = { _id: new mongoose.Types.ObjectId(), email: 'no@h.com', role: 'user' };
+    User.findById.mockReturnValueOnce({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: null }) });
+    const res = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${sign(user)}`)
+      .send({ title: 'Hello', body: 'Hi' });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('HANDLE_REQUIRED');
+  });
   test('extracts hashtags and tag endpoint lists the post', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
+    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
+
 
     let created;
     const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => {
@@ -253,9 +277,7 @@ describe('create route', () => {
 
     const user = { _id: new mongoose.Types.ObjectId(), email: 'c@e.com', role: 'user' };
 
-    jest
-      .spyOn(User, 'findById')
-      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
+    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
     jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
 
     const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => ({
@@ -279,9 +301,7 @@ describe('create route', () => {
   test('accepts MJML content for body', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 'm@j.com', role: 'user' };
 
-    jest
-      .spyOn(User, 'findById')
-      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
+    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
     jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
 
     const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => ({
@@ -306,9 +326,7 @@ describe('create route', () => {
   test('rejects invalid MJML content', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 'b@a.com', role: 'user' };
 
-    jest
-      .spyOn(User, 'findById')
-      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
+    User.findById.mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email, handle: 'h' }) });
 
     const res = await request(app)
       .post('/api/posts')
