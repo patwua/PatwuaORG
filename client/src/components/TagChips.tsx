@@ -5,7 +5,7 @@ export default function TagChips({ tags = [] as string[] }) {
   return (
     <div className="flex flex-wrap gap-2">
       {tags.map(tag => (
-        <Link key={tag} to={`/tag/${String(tag).toLowerCase()}`} className="inline-block px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
+        <Link key={tag} to={`/tag/${tag.toLowerCase()}`} className="inline-block px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">
           #{tag}
         </Link>
       ))}

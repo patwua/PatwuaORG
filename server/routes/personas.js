@@ -9,7 +9,9 @@ const router = express.Router()
 // GET /api/personas  (any authed user can list; admins will see theirs; non-admins see public list)
 router.get('/', auth(), async (req, res) => {
   try {
-    const filter = req.query.owner === 'me' ? { ownerUserId: req.user.id } : {}
+    const ownerMe = req.query.owner === 'me'
+    if (ownerMe && !req.user) return res.status(401).json({ error: 'Unauthorized' })
+    const filter = ownerMe ? { ownerUserId: req.user.id } : {}
     const items = await Persona.find(filter).sort({ updatedAt: -1 }).lean()
     res.json(items)
   } catch {
