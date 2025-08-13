@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 
 const Post = require('../../models/Post');
 const PostDraft = require('../../models/PostDraft');
+const Comment = require('../../models/Comment');
+const Vote = require('../../models/Vote');
 const postsRouter = require('../posts');
 const tagsRouter = require('../tags');
 const Persona = require('../../models/Persona');
@@ -367,6 +369,75 @@ describe('create route', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/MJML error/);
+  });
+});
+
+describe('hard delete route', () => {
+  test.each(['user', 'moderator'])(
+    'denies hard delete for %s role',
+    async role => {
+      const postId = new mongoose.Types.ObjectId().toString();
+      const res = await request(app)
+        .delete(`/api/posts/${postId}?hard=true`)
+        .set(
+          'Authorization',
+          `Bearer ${sign({ _id: new mongoose.Types.ObjectId(), email: 'r@e.com', role })}`
+        );
+      expect(res.status).toBe(403);
+    }
+  );
+
+  test.each(['', '?hard=false'])(
+    'requires hard=true query (%s)',
+    async query => {
+      const postId = new mongoose.Types.ObjectId().toString();
+      const admin = { _id: new mongoose.Types.ObjectId(), email: 'a@e.com', role: 'admin' };
+      const res = await request(app)
+        .delete(`/api/posts/${postId}${query}`)
+        .set('Authorization', `Bearer ${sign(admin)}`);
+      expect(res.status).toBe(400);
+    }
+  );
+
+  test('returns 400 for invalid post id', async () => {
+    const admin = { _id: new mongoose.Types.ObjectId(), email: 'a@e.com', role: 'admin' };
+    const res = await request(app)
+      .delete('/api/posts/notanid?hard=true')
+      .set('Authorization', `Bearer ${sign(admin)}`);
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 404 when post is missing', async () => {
+    const postId = new mongoose.Types.ObjectId().toString();
+    const admin = { _id: new mongoose.Types.ObjectId(), email: 'a@e.com', role: 'admin' };
+    jest.spyOn(Post, 'findById').mockReturnValue({ lean: () => Promise.resolve(null) });
+    const res = await request(app)
+      .delete(`/api/posts/${postId}?hard=true`)
+      .set('Authorization', `Bearer ${sign(admin)}`);
+    expect(res.status).toBe(404);
+  });
+
+  test('hard delete cascades to related models', async () => {
+    const postId = new mongoose.Types.ObjectId().toString();
+    const admin = { _id: new mongoose.Types.ObjectId(), email: 'a@e.com', role: 'system_admin' };
+    jest
+      .spyOn(Post, 'findById')
+      .mockReturnValue({ lean: () => Promise.resolve({ _id: postId }) });
+    const delPost = jest.spyOn(Post, 'deleteOne').mockResolvedValue({ deletedCount: 1 });
+    const delComments = jest.spyOn(Comment, 'deleteMany').mockResolvedValue({ deletedCount: 2 });
+    const delVotes = jest.spyOn(Vote, 'deleteMany').mockResolvedValue({ deletedCount: 3 });
+    const delDrafts = jest.spyOn(PostDraft, 'deleteMany').mockResolvedValue({ deletedCount: 1 });
+
+    const res = await request(app)
+      .delete(`/api/posts/${postId}?hard=true`)
+      .set('Authorization', `Bearer ${sign(admin)}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true, deletedPostId: postId, deletedPost: true });
+    expect(delComments).toHaveBeenCalledWith({ post: postId });
+    expect(delVotes).toHaveBeenCalledWith({ post: postId });
+    expect(delDrafts).toHaveBeenCalledWith({ post: postId });
+    expect(delPost).toHaveBeenCalledWith({ _id: postId });
   });
 });
 
