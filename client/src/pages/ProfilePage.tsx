@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getPublicProfile, getUserPersonas, getMyProfile } from '../lib/users'
-import type { Persona } from '../types/persona'
+import { getByHandle, getMyProfile } from '../lib/users'
 import { avatarUrl } from '../lib/upload'
 
 type PublicUser = { id:string; slug:string; name:string; avatar?:string; bio?:string; location?:string; categories?:string[]; verified?:boolean }
@@ -10,7 +9,6 @@ export default function ProfilePage() {
   const { slug = '' } = useParams()
   const navigate = useNavigate()
   const [user, setUser] = useState<PublicUser | null>(null)
-  const [personas, setPersonas] = useState<Persona[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,10 +27,9 @@ export default function ProfilePage() {
             navigate(`/u/${targetSlug}`, { replace: true })
           }
         }
-        const u = await getPublicProfile(targetSlug)
-        const ps = await getUserPersonas(targetSlug)
+        const u = await getByHandle(targetSlug)
         if (!alive) return
-        setUser(u); setPersonas(ps)
+        setUser(u.user)
       } catch (e:any) {
         setError(e?.message || 'Failed to load profile')
       } finally {
@@ -65,21 +62,7 @@ export default function ProfilePage() {
         {user.bio && <p className="mt-4 text-sm text-neutral-700 dark:text-neutral-300 whitespace-pre-line">{user.bio}</p>}
       </div>
 
-      <div className="card p-5">
-        <div className="font-semibold mb-3">Personas</div>
-        {personas.length === 0 ? (
-          <div className="text-sm text-neutral-500">No personas yet.</div>
-        ) : (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {personas.map(p => (
-              <li key={p._id} className="p-3 border rounded-lg">
-                <div className="font-medium">{p.name}</div>
-                {p.bio && <div className="text-xs text-neutral-500 mt-1 line-clamp-2">{p.bio}</div>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {/* posts or other content could go here */}
     </div>
   )
 }

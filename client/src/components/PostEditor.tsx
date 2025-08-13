@@ -4,8 +4,6 @@ import { uploadToCloudinary } from '@/lib/upload';
 import { useAuth } from '@/context/AuthContext';
 import { isCloudinaryUrl, withTransform } from '@/lib/images'
 
-type Persona = { _id: string; name: string };
-
 function localDetect(s: string): 'richtext'|'html'|'mjml' {
   let t = s.trim().replace(/^\uFEFF/, '').replace(/^<!doctype[^>]*>/i,'').replace(/^<!--[\s\S]*?-->/,'').trim();
   if (/^<\s*mjml[\s>]/i.test(t)) return 'mjml';
@@ -19,8 +17,6 @@ export default function PostEditor() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState(''); // plain/HTML/MJML
   const [detected, setDetected] = useState<'richtext'|'html'|'mjml'>('richtext');
-  const [personas, setPersonas] = useState<Persona[]>([]);
-  const [personaId, setPersonaId] = useState<string>('');
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [coverSuggested, setCoverSuggested] = useState<string | null>(null);
   const [images, setImages] = useState<{url?:string}[]>([]);
@@ -31,18 +27,11 @@ export default function PostEditor() {
 
   const bodyRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // load personas when editor opens
-  useEffect(() => {
-    if (!open) return
-    api.get('/personas?owner=me')
-      .then(({ data }) => setPersonas(Array.isArray(data) ? data : (data.personas || [])))
-      .catch(() => {})
-  }, [open])
 
   function resetAll() {
     setTitle(''); setContent(''); setPreviewHtml(null); setCoverSuggested(null);
     setImages([]); setVideos([]); setCoverOverride(null); setError(null);
-    setDetected('richtext'); setPersonaId('');
+    setDetected('richtext');
   }
 
   async function doPreview() {
@@ -67,7 +56,6 @@ export default function PostEditor() {
     setBusy(true); setError(null);
     try {
       const payload: any = { title, content };
-      if (personaId) payload.personaId = personaId;
       if (coverOverride) payload.coverImage = coverOverride;
       const { data } = await api.post('/posts', payload);
       setOpen(false);
@@ -149,18 +137,6 @@ export default function PostEditor() {
                   className="w-full border rounded px-3 py-2"
                   placeholder="Give it a title"
                 />
-              </div>
-
-              {/* Persona */}
-              <div>
-                <label className="block text-sm mb-1">Posting as</label>
-                <select value={personaId} onChange={e => setPersonaId(e.target.value)} className="border rounded px-2 py-2">
-                  {/* default persona option */}
-                  <option value="">(default persona)</option>
-                  {personas.map((p: any) => (
-                    <option key={p._id} value={p._id}>{p.name}</option>
-                  ))}
-                </select>
               </div>
 
               {/* Body textarea */}

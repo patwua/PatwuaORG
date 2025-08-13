@@ -3,7 +3,6 @@ import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import { Moon, SunMedium, PenSquare, ClipboardCheck } from 'lucide-react'
 import AdminReviewModal from './components/AdminReviewModal'
 import Search from './components/Search'
-import PersonaSwitcher from './components/PersonaSwitcher'
 import BottomNav from './components/BottomNav'
 import PostCard from './components/PostCard'
 import AuthModal from './components/AuthModal'
@@ -12,16 +11,15 @@ import PostDetailPage from './pages/PostDetailPage'
 import TagPage from './pages/TagPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import EditProfileModal from './components/EditProfileModal'
-import AddPersonaModal from './components/AddPersonaModal'
+import HandlePickerModal from './components/HandlePickerModal'
 import { useAuth } from './context/AuthContext'
-import { usePersona } from './context/PersonaContext'
 import type { Post } from './types/post'
 import { getPosts, votePost } from './lib/api'
 import TrendingTags from './components/TrendingTags'
 
 const PostEditorLazy = lazy(() => import('./components/PostEditor'))
 
-function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona }: { onOpenAuth: () => void; onOpenReview: () => void; onOpenEditProfile: () => void; onOpenAddPersona: () => void }) {
+function Header({ onOpenAuth, onOpenReview, onOpenEditProfile }: { onOpenAuth: () => void; onOpenReview: () => void; onOpenEditProfile: () => void }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [dark, setDark] = useState(false)
@@ -45,18 +43,12 @@ function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona 
         <div className="font-semibold text-lg tracking-tight"><Link to="/">Patwua</Link></div>
         <div className="flex-1" />
         <Search />
-        <PersonaSwitcher />
         <button onClick={toggleTheme} className="ml-2 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Toggle theme">
           {dark ? <SunMedium className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
         {user ? (
           <>
-            <button onClick={() => navigate('/u/me')} className="text-sm underline hidden sm:inline">Hi, {user.displayName || user.email}</button>
-            {user.role === 'admin' && (
-              <button onClick={onOpenAddPersona} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
-                Add Persona
-              </button>
-            )}
+            <button onClick={() => navigate(user.handle ? `/@${user.handle}` : '/')} className="text-sm underline hidden sm:inline">Hi, {user.displayName || user.email}</button>
             <button onClick={onOpenEditProfile} className="ml-2 px-3 py-1.5 rounded-full border hover:bg-neutral-100 dark:hover:bg-neutral-800">
               Edit Profile
             </button>
@@ -83,14 +75,12 @@ function Header({ onOpenAuth, onOpenReview, onOpenEditProfile, onOpenAddPersona 
 
 
 export default function App() {
-  usePersona()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAuth, setShowAuth] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
-  const [showAddPersona, setShowAddPersona] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -134,7 +124,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-neutral-900 dark:text-neutral-100">
-      <Header onOpenAuth={() => setShowAuth(true)} onOpenReview={() => setShowReview(true)} onOpenEditProfile={() => setShowEditProfile(true)} onOpenAddPersona={() => setShowAddPersona(true)} />
+      <Header onOpenAuth={() => setShowAuth(true)} onOpenReview={() => setShowReview(true)} onOpenEditProfile={() => setShowEditProfile(true)} />
       <section className="bg-gradient-to-br from-orange-100 via-amber-50 to-white dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 border-b border-orange-100/70 dark:border-neutral-800">
         <div className="mx-auto max-w-6xl px-4 py-6 md:py-10">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Where Every Voice Has a Place</h1>
@@ -199,7 +189,7 @@ export default function App() {
           }
         />
         <Route path="/p/:slug" element={<PostDetailPage />} />
-        <Route path="/u/:slug" element={<ProfilePage />} />
+        <Route path="/@:slug" element={<ProfilePage />} />
         <Route path="/tag/:tag" element={<TagPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
       </Routes>
@@ -210,8 +200,8 @@ export default function App() {
       </Suspense>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       {showReview && <AdminReviewModal onClose={() => setShowReview(false)} />}
-      {showAddPersona && <AddPersonaModal onClose={() => setShowAddPersona(false)} />}
       {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
+      <HandlePickerModal />
     </div>
   )
 }

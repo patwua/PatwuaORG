@@ -45,12 +45,20 @@ export default function PostComments({ post }: { post: Post }) {
           {comments.map((c) => (
             <div key={c._id} className="flex gap-3">
               <Avatar className="mt-1 flex-shrink-0">
-                <AvatarImage src={avatarUrl(c.personaAvatar || '')} />
-                <AvatarFallback>{(c.personaName || 'U').charAt(0)}</AvatarFallback>
+                <AvatarImage src={avatarUrl(c.authorUserId?.avatar || '')} />
+                <AvatarFallback>{(c.authorUserId?.displayName || c.authorUserId?.handle || 'U').charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="comment-bubble">
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{c.personaName || 'User'}</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                    {c.authorUserId?.handle ? (
+                      <a href={`/@${c.authorUserId.handle}`} className="hover:underline">
+                        {c.authorUserId.displayName || '@' + c.authorUserId.handle}
+                      </a>
+                    ) : (
+                      c.authorUserId?.displayName || 'User'
+                    )}
+                  </p>
                   <p className="text-gray-800 dark:text-gray-200 mt-1">{c.body}</p>
                 </div>
                 <div className="flex items-center gap-3 mt-2 ml-3">

@@ -9,7 +9,6 @@ const Comment = require('../../models/Comment');
 const Vote = require('../../models/Vote');
 const postsRouter = require('../posts');
 const tagsRouter = require('../tags');
-const Persona = require('../../models/Persona');
 const User = require('../../models/User');
 
 function sign(user) {
@@ -206,46 +205,8 @@ describe('preview route', () => {
 });
 
 describe('create route', () => {
-  test('falls back to user info when personaId is invalid', async () => {
-    const user = { _id: new mongoose.Types.ObjectId(), email: 'u@test.com', role: 'user' };
-
-    jest
-      .spyOn(Persona, 'findOne')
-      .mockReturnValue({ lean: () => Promise.resolve(null) });
-    jest
-      .spyOn(User, 'findById')
-      .mockReturnValue({
-        lean: () =>
-          Promise.resolve({ _id: user._id, displayName: 'UserDisp', avatar: 'a.png', email: user.email }),
-      });
-    jest.spyOn(Post, 'findByIdAndUpdate').mockResolvedValue(null);
-
-    const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => ({
-      _id: new mongoose.Types.ObjectId().toString(),
-      slug: 'slug',
-      ...payload,
-    }));
-
-    const res = await request(app)
-      .post('/api/posts')
-      .set('Authorization', `Bearer ${sign(user)}`)
-      .send({ title: 'hello', body: 'body', personaId: new mongoose.Types.ObjectId().toString() });
-
-    expect(res.status).toBe(201);
-    expect(createSpy.mock.calls[0][0].personaName).toBe('UserDisp');
-    expect(res.body.post.personaName).toBe('UserDisp');
-    expect(res.body.post.personaAvatar).toBe('a.png');
-  });
-
   test('extracts hashtags and tag endpoint lists the post', async () => {
     const user = { _id: new mongoose.Types.ObjectId(), email: 't@e.com', role: 'user' };
-
-    jest
-      .spyOn(Persona, 'findOne')
-      .mockReturnValue({ lean: () => Promise.resolve(null) });
-    jest
-      .spyOn(User, 'findById')
-      .mockReturnValue({ lean: () => Promise.resolve({ _id: user._id, email: user.email }) });
 
     let created;
     const createSpy = jest.spyOn(Post, 'create').mockImplementation(async payload => {

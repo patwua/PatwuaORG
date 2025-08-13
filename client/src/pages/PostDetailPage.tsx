@@ -54,26 +54,20 @@ export default function PostDetailPage() {
       {/* Byline */}
       <header className="flex items-center gap-3">
         <div className="h-12 w-12 rounded-full overflow-hidden bg-neutral-200">
-          {(post.persona?.avatar || post.author?.avatar) && (
+          {post.author?.avatar && (
             <img
-              src={post.persona?.avatar ?? post.author?.avatar!}
-              alt={post.persona?.name ?? post.author?.name ?? 'Avatar'}
+              src={post.author.avatar}
+              alt={post.author.displayName || post.author.handle || 'Avatar'}
               className="h-full w-full object-cover"
             />
           )}
         </div>
         <div>
           <div className="font-semibold">
-            {post.persona?.name ?? post.author?.name ?? 'Unknown'}
+            {post.author?.displayName || (post.author?.handle ? '@' + post.author.handle : 'Unknown')}
           </div>
           <div className="text-xs text-neutral-500">
             {created ? created.toLocaleString() : ''}
-            {post.persona && post.author?.slug && (
-              <>
-                {' · via '}
-                <Link className="underline" to={`/u/${post.author.slug}`}>{post.author.name}</Link>
-              </>
-            )}
           </div>
         </div>
       </header>

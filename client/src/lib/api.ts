@@ -27,14 +27,7 @@ export function normalizePost(p: any): Post {
     path: p.path ?? (p.slug ? `/p/${p.slug}` : undefined),
     slug: p.slug,
     type: p.type,
-    author:
-      p.author ?? {
-        name: p.authorName ?? p.author?.name ?? 'Unknown',
-        verified: !!(p.author?.verified ?? p.authorVerified),
-      },
-    ...(p.personaId || p.personaName || p.personaAvatar
-      ? { persona: { _id: p.personaId, name: p.personaName, avatar: p.personaAvatar } }
-      : {}),
+    author: p.authorUserId || p.author || {},
     stats: {
       comments: Number(p.stats?.comments ?? p.commentCount ?? p.comments ?? 0),
       votes: Number(p.stats?.votes ?? p.votes ?? p.score ?? 0),
@@ -86,7 +79,7 @@ export const unarchivePost = (id: string) => api.post(`/posts/${id}/unarchive`)
 export const previewPost = (payload: { content?: string; body?: string }) =>
   api.post('/posts/preview', payload)
 
-export const createPost = (payload: { title: string; content?: string; body?: string; personaId?: string; coverImage?: string }) =>
+export const createPost = (payload: { title: string; content?: string; body?: string; coverImage?: string }) =>
   api.post('/posts', payload)
 
 export const votePost = (postId: string, value: -1 | 0 | 1) =>
@@ -96,5 +89,5 @@ export const getVotes = (postId: string) =>
 export const getComments = (postId: string) => api.get(`/posts/${postId}/comments`)
 export const addComment = (
   postId: string,
-  payload: { body: string; personaId?: string }
+  payload: { body: string }
 ) => api.post(`/posts/${postId}/comments`, payload)
