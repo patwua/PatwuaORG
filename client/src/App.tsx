@@ -95,9 +95,15 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const open = () => setShowAuth(true)
+    window.addEventListener('open-auth', open)
+    return () => window.removeEventListener('open-auth', open)
+  }, [])
+
   async function onVote(id: string, dir: 'up' | 'down') {
     const { data } = await votePost(id, dir === 'up' ? 1 : -1)
-    const { score, up, down, myVote } = data
+    const { score, upvotes: up, downvotes: down, userVote } = data
     setPosts(prev =>
       prev.map(p =>
         p.id === id
@@ -108,7 +114,7 @@ export default function App() {
                 votes: score,
                 up,
                 down,
-                myVote,
+                myVote: userVote,
               },
             }
           : p

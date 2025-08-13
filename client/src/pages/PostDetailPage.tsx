@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getPostBySlug, unarchivePost } from '../lib/api'
+import { getPostBySlug, unarchivePost, getComments, addComment } from '../lib/api'
 import TagChips from '../components/TagChips'
 import { useAuth } from '../context/AuthContext'
 import type { Post } from '../types/post'
 import ArchiveModal from '../components/ArchiveModal'
+import { useRef } from 'react'
 
 export default function PostDetailPage() {
   const { slug = '' } = useParams()
@@ -13,6 +14,9 @@ export default function PostDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [showArchive, setShowArchive] = useState(false)
   const { user } = useAuth()
+  const [comments, setComments] = useState<any[]>([])
+  const [commentText, setCommentText] = useState('')
+  const commentsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -30,6 +34,16 @@ export default function PostDetailPage() {
     })()
     return () => { alive = false }
   }, [slug])
+
+  useEffect(() => {
+    if (post) {
+      const id = (post as any)._id || post.id
+      getComments(id).then(({ data }) => setComments(data.items)).catch(() => {})
+      if (window.location.hash === '#comments') {
+        setTimeout(() => commentsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+      }
+    }
+  }, [post])
 
   if (loading) return <div className="mx-auto max-w-3xl p-4">Loading…</div>
   if (error || !post) return <div className="mx-auto max-w-3xl p-4 text-red-600">Post not found.</div>
@@ -121,6 +135,39 @@ export default function PostDetailPage() {
           onArchived={(p) => { setPost(p); setShowArchive(false); }}
         />
       )}
+
+      <div ref={commentsRef} id="comments" className="pt-6">
+        <h2 className="text-xl font-semibold mb-4">Comments</h2>
+        <div className="space-y-4 mb-4">
+          {comments.map(c => (
+            <div key={c._id} className="border-b pb-2">
+              <div className="text-sm font-medium">
+                {c.author?.handle ? (
+                  <a href={`/@${c.author.handle}`} className="hover:underline">{c.author.displayName || '@'+c.author.handle}</a>
+                ) : (
+                  c.author?.displayName || 'Unknown'
+                )}
+              </div>
+              <div className="text-sm text-neutral-700 dark:text-neutral-200">{c.body}</div>
+            </div>
+          ))}
+          {comments.length === 0 && <div className="text-sm text-neutral-500">No comments yet.</div>}
+        </div>
+        {user ? (
+          <form onSubmit={async e => {
+            e.preventDefault()
+            if (!commentText.trim()) return
+            const { data } = await addComment(idOr as string, { body: commentText.trim() })
+            setComments([data.comment, ...comments])
+            setCommentText('')
+          }} className="space-y-2">
+            <textarea value={commentText} onChange={e => setCommentText(e.target.value)} className="w-full border rounded p-2" rows={3} placeholder="Add a comment..." />
+            <button type="submit" className="px-3 py-1 rounded bg-blue-600 text-white text-sm">Comment</button>
+          </form>
+        ) : (
+          <button onClick={() => window.dispatchEvent(new Event('open-auth'))} className="px-3 py-2 rounded bg-blue-600 text-white text-sm">Log in to comment</button>
+        )}
+      </div>
     </article>
   )
 }

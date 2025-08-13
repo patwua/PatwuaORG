@@ -76,13 +76,14 @@ export default function PostCard({
           )}
           <div className="leading-tight">
             <div className="flex items-center gap-1.5 text-sm font-medium">
-              {post.author?.handle ? (
-                <a href={`/@${post.author.handle}`} className="hover:underline">
-                  {post.author.displayName || '@' + post.author.handle}
-                </a>
-              ) : (
-                <span>{post.author?.displayName || (post.author?.handle ? '@' + post.author.handle : 'Unknown')}</span>
-              )}
+              {(() => {
+                const name = post.author?.displayName || (post.author?.handle ? '@' + post.author.handle : 'Unknown');
+                return post.author?.handle ? (
+                  <a href={`/@${post.author.handle}`} className="hover:underline">{name}</a>
+                ) : (
+                  <span>{name}</span>
+                );
+              })()}
               {post.author?.verified && <CheckCheck className="h-4 w-4 text-emerald-500" />}
             </div>
             <div className="text-xs text-neutral-500 flex items-center gap-1">

@@ -5,10 +5,12 @@ import { ArrowUpIcon, ArrowDownIcon, ChatBubbleIcon } from '@radix-ui/react-icon
 import { useNavigate } from 'react-router-dom';
 import { votePost, getVotes } from '@/lib/api';
 import type { Post } from '@/types/post';
+import { useAuth } from '@/context/AuthContext';
 
 export default function PostActions({ post }: { post: Post }) {
   const [score, setScore] = useState(post.stats?.votes ?? post.score ?? 0);
   const [myVote, setMyVote] = useState(post.stats?.myVote ?? 0);
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,11 +18,15 @@ export default function PostActions({ post }: { post: Post }) {
     if (!id) return;
     getVotes(id).then(({ data }) => {
       setScore(data.score);
-      setMyVote(data.myVote);
+      setMyVote(data.userVote);
     }).catch(() => {});
   }, [post]);
 
   async function handleVote(next: -1 | 0 | 1) {
+    if (!user) {
+      window.dispatchEvent(new Event('open-auth'));
+      return;
+    }
     const prev = myVote;
     const optimistic = score - prev + next;
     setMyVote(next);
@@ -29,7 +35,7 @@ export default function PostActions({ post }: { post: Post }) {
       const id = (post as any)._id || post.id;
       const { data } = await votePost(id, next);
       setScore(data.score);
-      setMyVote(data.myVote);
+      setMyVote(data.userVote);
     } catch {
       setMyVote(prev);
       setScore(score);

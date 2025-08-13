@@ -1,5 +1,7 @@
 const express = require('express')
 const Post = require('../models/Post')
+const Vote = require('../models/Vote')
+const auth = require('../middleware/auth')
 const { normalizeTag } = require('../utils/tags')
 const attachAuthors = require('./attachAuthors')
 
@@ -28,7 +30,7 @@ router.get('/trending', async (req, res) => {
 
 
 // GET /api/tags/:tag?limit=
-router.get('/:tag', async (req, res, next) => {
+router.get('/:tag', auth(false), async (req, res, next) => {
   try {
     const limit = Math.max(1, parseInt(req.query.limit, 10) || 50)
     const raw = String(req.params.tag || '').toLowerCase()
@@ -39,6 +41,16 @@ router.get('/:tag', async (req, res, next) => {
       .limit(limit)
       .lean()
     await attachAuthors(posts)
+
+    if (req.user) {
+      const votes = await Vote.find({ userId: req.user.id, postId: { $in: posts.map(p => p._id) } }).lean()
+      const map = {}
+      for (const v of votes) map[String(v.postId)] = v.value
+      for (const p of posts) p.userVote = map[String(p._id)] || 0
+    } else {
+      for (const p of posts) p.userVote = 0
+    }
+
     res.json({ tag: t, posts })
   } catch (e) { next(e) }
 })

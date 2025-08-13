@@ -31,7 +31,7 @@ async function ensureHandleForPublish(req, res) {
 }
 
 // List posts
-router.get('/', async (req, res, next) => {
+router.get('/', auth(false), async (req, res, next) => {
   try {
     const status = (req.query.status || 'active').toString();
     const filter = { status };
@@ -46,6 +46,16 @@ router.get('/', async (req, res, next) => {
     for (const p of posts) {
       if (p.bodyHtml) p.bodyHtml = rewriteJoinCTA(p.bodyHtml);
     }
+
+    if (req.user) {
+      const votes = await Vote.find({ userId: req.user.id, postId: { $in: posts.map(p => p._id) } }).lean();
+      const map = {};
+      for (const v of votes) map[String(v.postId)] = v.value;
+      for (const p of posts) p.userVote = map[String(p._id)] || 0;
+    } else {
+      for (const p of posts) p.userVote = 0;
+    }
+
     res.json(posts);
   } catch (e) { next(e); }
 });
@@ -168,6 +178,10 @@ router.get('/slug/:slug', auth(false), async (req, res, next) => {
     if (!post) return res.status(404).json({ error: 'Not found' });
     await attachAuthors(post);
     if (post.bodyHtml) post.bodyHtml = rewriteJoinCTA(post.bodyHtml);
+    if (req.user) {
+      const mine = await Vote.findOne({ postId: post._id, userId: req.user.id }).lean();
+      post.userVote = mine?.value ?? 0;
+    } else post.userVote = 0;
     res.json({ post });
   } catch (e) { next(e); }
 });
@@ -175,31 +189,36 @@ router.get('/slug/:slug', auth(false), async (req, res, next) => {
 // Upsert vote (auth required)
 router.post('/:id/vote', auth(true), async (req, res, next) => {
   try {
-    const { value } = req.body || {}; // -1, 0, 1
+    const { value } = req.body || {};
     if (![-1, 0, 1].includes(value)) return res.status(400).json({ error: 'Invalid vote' });
     const postId = req.params.id;
 
-    await Vote.updateOne(
-      { post: postId, user: req.user.id },
-      { $set: { value } },
-      { upsert: true }
-    );
+    const existing = await Vote.findOne({ postId, userId: req.user.id }).lean();
+    let final = value;
+    if (value === 0) {
+      if (existing) await Vote.deleteOne({ _id: existing._id });
+    } else if (!existing) {
+      await Vote.create({ postId, userId: req.user.id, value });
+    } else if (existing.value === value) {
+      await Vote.deleteOne({ _id: existing._id });
+      final = 0;
+    } else {
+      await Vote.updateOne({ _id: existing._id }, { $set: { value } });
+    }
 
     const agg = await Vote.aggregate([
-      { $match: { post: new mongoose.Types.ObjectId(postId) } },
+      { $match: { postId: new mongoose.Types.ObjectId(postId) } },
       {
         $group: {
-          _id: '$post',
-          score: { $sum: '$value' },
-          up: { $sum: { $cond: [{ $eq: ['$value', 1] }, 1, 0] } },
-          down: { $sum: { $cond: [{ $eq: ['$value', -1] }, 1, 0] } },
+          _id: '$postId',
+          upvotes: { $sum: { $cond: [{ $eq: ['$value', 1] }, 1, 0] } },
+          downvotes: { $sum: { $cond: [{ $eq: ['$value', -1] }, 1, 0] } },
         },
       },
     ]);
-    const { score = 0, up = 0, down = 0 } = agg[0] || {};
-
-    const mine = await Vote.findOne({ post: postId, user: req.user.id }).lean();
-    res.json({ score, up, down, myVote: mine?.value ?? 0 });
+    const { upvotes = 0, downvotes = 0 } = agg[0] || {};
+    const score = upvotes - downvotes;
+    res.json({ ok: true, postId, upvotes, downvotes, score, userVote: final });
   } catch (e) {
     next(e);
   }
@@ -210,23 +229,23 @@ router.get('/:id/votes', auth(false), async (req, res, next) => {
   try {
     const postId = req.params.id;
     const agg = await Vote.aggregate([
-      { $match: { post: new mongoose.Types.ObjectId(postId) } },
+      { $match: { postId: new mongoose.Types.ObjectId(postId) } },
       {
         $group: {
-          _id: '$post',
-          score: { $sum: '$value' },
-          up: { $sum: { $cond: [{ $eq: ['$value', 1] }, 1, 0] } },
-          down: { $sum: { $cond: [{ $eq: ['$value', -1] }, 1, 0] } },
+          _id: '$postId',
+          upvotes: { $sum: { $cond: [{ $eq: ['$value', 1] }, 1, 0] } },
+          downvotes: { $sum: { $cond: [{ $eq: ['$value', -1] }, 1, 0] } },
         },
       },
     ]);
-    const { score = 0, up = 0, down = 0 } = agg[0] || {};
-    let myVote = 0;
+    const { upvotes = 0, downvotes = 0 } = agg[0] || {};
+    const score = upvotes - downvotes;
+    let userVote = 0;
     if (req.user) {
-      const mine = await Vote.findOne({ post: postId, user: req.user.id }).lean();
-      myVote = mine?.value ?? 0;
+      const mine = await Vote.findOne({ postId, userId: req.user.id }).lean();
+      userVote = mine?.value ?? 0;
     }
-    res.json({ score, up, down, myVote });
+    res.json({ ok: true, postId, upvotes, downvotes, score, userVote });
   } catch (e) {
     next(e);
   }
@@ -235,10 +254,34 @@ router.get('/:id/votes', auth(false), async (req, res, next) => {
 // list comments
 router.get('/:id/comments', auth(false), async (req, res, next) => {
   try {
-    const comments = await Comment.find({ post: req.params.id, status: 'visible' })
-      .sort({ createdAt: -1 })
+    const postId = req.params.id;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 20);
+    const filter = { post: postId, status: 'visible' };
+    const [total, docs] = await Promise.all([
+      Comment.countDocuments(filter),
+      Comment.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ]);
+    const authorIds = docs.map(c => c.authorUserId).filter(Boolean);
+    const authors = await User.find({ _id: { $in: authorIds } })
+      .select('_id handle displayName avatar')
       .lean();
-    res.json({ comments });
+    const map = {};
+    for (const a of authors) {
+      map[String(a._id)] = { id: String(a._id), handle: a.handle, displayName: a.displayName, avatar: a.avatar };
+    }
+    const items = docs.map(c => ({
+      _id: String(c._id),
+      body: c.body,
+      createdAt: c.createdAt,
+      author: map[String(c.authorUserId)] || null,
+    }));
+    const nextPage = page * limit < total ? page + 1 : null;
+    res.json({ items, nextPage, total });
   } catch (e) {
     next(e);
   }
@@ -247,16 +290,20 @@ router.get('/:id/comments', auth(false), async (req, res, next) => {
 // add comment (auth required)
 router.post('/:id/comments', auth(true), async (req, res, next) => {
   try {
-    const { body } = req.body || {};
-    if (!body || !String(body).trim()) return res.status(400).json({ error: 'Comment required' });
-
-    const c = await Comment.create({
-      post: req.params.id,
-      authorUserId: req.user.id,
-      body: String(body).trim(),
-    });
-
-    res.status(201).json({ comment: c });
+    const body = String(req.body?.body || '').trim();
+    if (body.length < 1 || body.length > 5000) return res.status(400).json({ error: 'Invalid comment' });
+    const postId = req.params.id;
+    const c = await Comment.create({ post: postId, authorUserId: req.user.id, body });
+    const author = await User.findById(req.user.id)
+      .select('_id handle displayName avatar')
+      .lean();
+    const comment = {
+      _id: String(c._id),
+      body: c.body,
+      createdAt: c.createdAt,
+      author: author ? { id: String(author._id), handle: author.handle, displayName: author.displayName, avatar: author.avatar } : null,
+    };
+    res.status(201).json({ comment });
   } catch (e) {
     next(e);
   }
@@ -457,7 +504,7 @@ router.delete('/:id', auth(true), async (req, res) => {
     // Cascade deletes
     await Promise.all([
       Comment.deleteMany({ post: id }),
-      Vote.deleteMany({ post: id }),
+      Vote.deleteMany({ postId: id }),
       PostDraft.deleteMany({ post: id }),
     ]);
     const { deletedCount } = await Post.deleteOne({ _id: id });

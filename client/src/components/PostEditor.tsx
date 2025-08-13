@@ -140,7 +140,8 @@ export default function PostEditor() {
       {/* Floating button — keep your existing classes/placement */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 rounded-full bg-red-600 text-white px-5 py-3 shadow-lg"
+        className="fixed right-6 z-50 rounded-full bg-red-600 text-white px-5 py-3 shadow-lg"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 72px)' }}
       >
         New Post
       </button>
