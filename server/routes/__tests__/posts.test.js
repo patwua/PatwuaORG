@@ -37,6 +37,9 @@ beforeEach(() => {
   jest.spyOn(User, 'findById').mockImplementation(id => ({
     lean: () => Promise.resolve({ _id: id, email: 'x', handle: 'tester' })
   }));
+  jest.spyOn(User, 'find').mockReturnValue({
+    select: () => ({ lean: () => Promise.resolve([]) })
+  });
 });
 
 describe('archive and unarchive routes', () => {
@@ -214,6 +217,32 @@ describe('draft routes', () => {
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('HANDLE_REQUIRED');
     expect(res.body.error).toBe('Handle required to publish');
+  });
+});
+
+describe('author hydration on list', () => {
+  test('GET /api/posts returns author object', async () => {
+    const authorId = new mongoose.Types.ObjectId();
+
+    jest.spyOn(Post, 'find').mockReturnValue({
+      sort: () => ({
+        limit: () => ({
+          lean: () => Promise.resolve([{ _id: new mongoose.Types.ObjectId(), title: 't', authorUserId: authorId }])
+        })
+      })
+    });
+
+    jest.spyOn(User, 'find').mockReturnValue({
+      select: () => ({
+        lean: () => Promise.resolve([{ _id: authorId, handle: 'tester', displayName: 'Test User', avatar: 'a.png' }])
+      })
+    });
+
+    const res = await request(app).get('/api/posts');
+    expect(res.status).toBe(200);
+    expect(res.body[0].author.displayName).toBe('Test User');
+    expect(res.body[0].author.handle).toBe('tester');
+    expect(res.body[0].author.email).toBeUndefined();
   });
 });
 

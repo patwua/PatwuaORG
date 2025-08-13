@@ -3,19 +3,20 @@ import type { PostType } from '@/types/post';
 import { avatarUrl } from '@/lib/upload';
 
 export default function PostHeader({ author, timestamp }: { author: any; timestamp: Date; }) {
+  const name = author?.displayName || (author?.handle ? '@' + author.handle : 'Unknown');
   return (
     <div className="p-4 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700">
       <div className="relative w-10 h-10 rounded-full overflow-hidden">
-        <img src={avatarUrl(author?.avatar || '')} alt={author?.displayName || author?.handle} className="object-cover w-full h-full" />
+        <img src={avatarUrl(author?.avatar || '')} alt={name} className="object-cover w-full h-full" />
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-1">
           {author?.handle ? (
             <a href={`/@${author.handle}`} className="font-medium hover:underline">
-              {author.displayName || '@' + author.handle}
+              {name}
             </a>
           ) : (
-            <h3 className="font-medium">{author?.displayName || author?.email?.split('@')[0] || 'Unknown'}</h3>
+            <h3 className="font-medium">{name}</h3>
           )}
           {author?.verified && <VerifiedBadge />}
         </div>

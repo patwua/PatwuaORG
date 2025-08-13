@@ -1,6 +1,7 @@
 const express = require('express')
 const Post = require('../models/Post')
 const { normalizeTag } = require('../utils/tags')
+const attachAuthors = require('./attachAuthors')
 
 const router = express.Router()
 
@@ -37,7 +38,7 @@ router.get('/:tag', async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()
-
+    await attachAuthors(posts)
     res.json({ tag: t, posts })
   } catch (e) { next(e) }
 })

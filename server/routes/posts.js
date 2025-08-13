@@ -11,6 +11,7 @@ const { normalize, extractHashtagsFromHtml, extractHashtagsFromText } = require(
 const cheerio = require('cheerio');
 const SITE = process.env.ALLOWED_ORIGIN || process.env.CLIENT_ORIGIN || '';
 const router = express.Router();
+const attachAuthors = require('./attachAuthors');
 
 function ttlDate() {
   const hours = Number(process.env.DRAFT_TTL_HOURS || 72);
@@ -43,6 +44,7 @@ router.get('/', async (req, res, next) => {
       filter.authorUserId = u._id;
     }
     const posts = await Post.find(filter).sort({ createdAt: -1 }).limit(50).lean();
+    await attachAuthors(posts);
     res.json(posts);
   } catch (e) { next(e); }
 });
@@ -149,6 +151,7 @@ router.post('/', auth(true), async (req, res) => {
       await Post.findByIdAndUpdate(doc._id, { bodyHtml: $.html() });
     }
 
+    await attachAuthors(doc);
     res.status(201).json({ post: doc });
   } catch (e) {
     req.log?.error?.(e);
@@ -161,8 +164,9 @@ router.post('/', auth(true), async (req, res) => {
  */
 router.get('/slug/:slug', auth(false), async (req, res, next) => {
   try {
-    const post = await Post.findOne({ slug: req.params.slug }).populate('authorUserId', 'handle displayName avatar role').lean();
+    const post = await Post.findOne({ slug: req.params.slug }).lean();
     if (!post) return res.status(404).json({ error: 'Not found' });
+    await attachAuthors(post);
     res.json({ post });
   } catch (e) { next(e); }
 });
@@ -374,6 +378,7 @@ router.post('/:id/draft/publish', auth(true), async (req, res) => {
     // Cleanup draft
     await PostDraft.deleteOne({ _id: draft._id });
 
+    await attachAuthors(post);
     res.json({ post });
   } catch (e) {
     req.log?.error?.(e);
@@ -402,6 +407,7 @@ router.post('/:id/archive', auth(true), async (req, res, next) => {
     );
     if (!updated) return res.status(404).json({ error: 'Post not found' });
 
+    await attachAuthors(updated);
     res.json({ post: updated });
   } catch (e) { next(e); }
 });
@@ -423,6 +429,7 @@ router.post('/:id/unarchive', auth(true), async (req, res, next) => {
       { status: 'active', archivedReason: null, archivedAt: null, archivedBy: null },
       { new: true }
     );
+    await attachAuthors(updated);
     res.json({ post: updated });
   } catch (e) { next(e); }
 });
