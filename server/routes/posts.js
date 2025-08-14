@@ -8,8 +8,12 @@ const PostDraft = require('../models/PostDraft');
 const auth = require('../middleware/auth');
 const { sanitize, compileMjml, stripToText, detectFormat, extractMedia, chooseCover, rewriteJoinCTA } = require('../utils/html');
 const { normalize, extractHashtagsFromHtml, extractHashtagsFromText } = require('../utils/tags');
+const { rateLimitByUserOrIp } = require('../middleware/rateLimit');
 const router = express.Router();
 const attachAuthors = require('./attachAuthors');
+
+const voteLimiter = rateLimitByUserOrIp({ windowMs: 60 * 1000, max: 60 });
+const commentLimiter = rateLimitByUserOrIp({ windowMs: 10 * 60 * 1000, max: 20 });
 
 function ttlDate() {
   const hours = Number(process.env.DRAFT_TTL_HOURS || 72);
@@ -44,7 +48,7 @@ router.get('/', auth(false), async (req, res, next) => {
     const posts = await Post.find(filter).sort({ createdAt: -1 }).limit(50).lean();
     await attachAuthors(posts);
     for (const p of posts) {
-      if (p.bodyHtml) p.bodyHtml = rewriteJoinCTA(p.bodyHtml);
+      if (p.bodyHtml) p.bodyHtml = rewriteJoinCTA(p.bodyHtml, p.slug);
     }
 
     if (req.user) {
@@ -154,7 +158,7 @@ router.post('/', auth(true), async (req, res) => {
 
     // CTA token replacement: [[POST_URL]] or data-cta="join"
     if (doc.bodyHtml) {
-      const updated = rewriteJoinCTA(doc.bodyHtml);
+      const updated = rewriteJoinCTA(doc.bodyHtml, doc.slug);
       if (updated !== doc.bodyHtml) {
         await Post.findByIdAndUpdate(doc._id, { bodyHtml: updated });
         doc.bodyHtml = updated;
@@ -177,7 +181,7 @@ router.get('/slug/:slug', auth(false), async (req, res, next) => {
     const post = await Post.findOne({ slug: req.params.slug }).lean();
     if (!post) return res.status(404).json({ error: 'Not found' });
     await attachAuthors(post);
-    if (post.bodyHtml) post.bodyHtml = rewriteJoinCTA(post.bodyHtml);
+    if (post.bodyHtml) post.bodyHtml = rewriteJoinCTA(post.bodyHtml, post.slug);
     if (req.user) {
       const mine = await Vote.findOne({ postId: post._id, userId: req.user.id }).lean();
       post.userVote = mine?.value ?? 0;
@@ -187,7 +191,7 @@ router.get('/slug/:slug', auth(false), async (req, res, next) => {
 });
 
 // Upsert vote (auth required)
-router.post('/:id/vote', auth(true), async (req, res, next) => {
+router.post('/:id/vote', auth(true), voteLimiter, async (req, res, next) => {
   try {
     const { value } = req.body || {};
     if (![-1, 0, 1].includes(value)) return res.status(400).json({ error: 'Invalid vote' });
@@ -288,7 +292,7 @@ router.get('/:id/comments', auth(false), async (req, res, next) => {
 });
 
 // add comment (auth required)
-router.post('/:id/comments', auth(true), async (req, res, next) => {
+router.post('/:id/comments', auth(true), commentLimiter, async (req, res, next) => {
   try {
     const body = String(req.body?.body || '').trim();
     if (body.length < 1 || body.length > 5000) return res.status(400).json({ error: 'Invalid comment' });
@@ -410,6 +414,7 @@ router.post('/:id/draft/publish', auth(true), async (req, res) => {
         } else {
           return res.status(400).json({ error: 'Draft must be HTML or MJML' });
         }
+        if (post.bodyHtml) post.bodyHtml = rewriteJoinCTA(post.bodyHtml, post.slug);
       }
 
     // cover override

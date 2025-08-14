@@ -7,6 +7,7 @@ import { avatarUrl } from '@/lib/upload';
 import { isCloudinaryUrl, withTransform, buildSrcSet, sizesUniversal } from '@/lib/images';
 import EditProfileModal from '@/components/EditProfileModal';
 import { useAuth } from '@/context/AuthContext';
+import { setCanonical, addJsonLd } from '@/lib/seo';
 
 export default function ProfilePage() {
   const { handle: rawHandle = '' } = useParams();
@@ -49,6 +50,29 @@ export default function ProfilePage() {
       const meta = document.querySelector('meta[name="description"]') || (() => { const m=document.createElement('meta'); m.name='description'; document.head.appendChild(m); return m; })();
       if (user.bio) (meta as HTMLMetaElement).content = user.bio;
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const origin = window.location.origin;
+    const url = `${origin}/@${user.handle}`;
+    const cleanCanonical = setCanonical(url);
+    const sameAs = (user.links || [])
+      .map((l: any) => l.url)
+      .filter((u: string) => /^https?:\/\//.test(u));
+    const ld: any = {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: user.displayName || '@' + user.handle,
+      url,
+    };
+    if (user.avatar) ld.image = avatarUrl(user.avatar);
+    if (sameAs.length) ld.sameAs = sameAs;
+    const cleanLd = addJsonLd(ld);
+    return () => {
+      cleanCanonical();
+      cleanLd();
+    };
   }, [user]);
 
   useEffect(() => {

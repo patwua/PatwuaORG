@@ -99,12 +99,13 @@ function chooseCover({ images, videos }) {
   return null;
 }
 
-function rewriteJoinCTA(html = '') {
+function rewriteJoinCTA(html = '', slug) {
   if (!html) return html;
   const $ = cheerio.load(html);
   $('a[href="[[POST_URL]]"], a[data-cta="join"]').each((_, el) => {
     const $el = $(el);
-    $el.attr('href', '/');
+    const targetUrl = slug ? `/p/${slug}#comments` : '/#comments';
+    $el.attr('href', targetUrl);
     $el.removeAttr('target');
     const rel = ($el.attr('rel') || '')
       .split(/\s+/)

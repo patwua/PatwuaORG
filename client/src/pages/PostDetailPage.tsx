@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import type { Post } from '../types/post'
 import ArchiveModal from '../components/ArchiveModal'
 import { useRef } from 'react'
+import { setCanonical, addJsonLd } from '../lib/seo'
 
 export default function PostDetailPage() {
   const { slug = '' } = useParams()
@@ -15,6 +16,8 @@ export default function PostDetailPage() {
   const [showArchive, setShowArchive] = useState(false)
   const { user } = useAuth()
   const [comments, setComments] = useState<any[]>([])
+  const [nextPage, setNextPage] = useState<number | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [commentText, setCommentText] = useState('')
   const commentsRef = useRef<HTMLDivElement | null>(null)
 
@@ -38,10 +41,43 @@ export default function PostDetailPage() {
   useEffect(() => {
     if (post) {
       const id = (post as any)._id || post.id
-      getComments(id).then(({ data }) => setComments(data.items)).catch(() => {})
+      getComments(id, { page: 1 })
+        .then(({ data }) => {
+          setComments(data.items)
+          setNextPage(data.nextPage)
+        })
+        .catch(() => {})
       if (window.location.hash === '#comments') {
         setTimeout(() => commentsRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
       }
+    }
+  }, [post])
+
+  useEffect(() => {
+    if (!post) return
+    const origin = window.location.origin
+    const url = `${origin}/p/${post.slug}`
+    const cleanCanonical = setCanonical(url)
+    const ld = {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: post.title,
+      datePublished: post.createdAt,
+      dateModified: post.editedAt || post.updatedAt || post.createdAt,
+      author: post.author ? {
+        '@type': 'Person',
+        name: post.author.displayName || (post.author.handle ? '@' + post.author.handle : undefined),
+        ...(post.author.handle ? { url: `${origin}/@${post.author.handle}` } : {}),
+      } : undefined,
+      url,
+      ...(post.coverImage ? { image: post.coverImage } : {}),
+      publisher: { '@type': 'Organization', name: 'Patwua' },
+      mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    }
+    const cleanLd = addJsonLd(ld)
+    return () => {
+      cleanCanonical()
+      cleanLd()
     }
   }, [post])
 
@@ -153,6 +189,26 @@ export default function PostDetailPage() {
           ))}
           {comments.length === 0 && <div className="text-sm text-neutral-500">No comments yet.</div>}
         </div>
+        {nextPage && (
+          <button
+            onClick={async () => {
+              if (!nextPage) return
+              setLoadingMore(true)
+              const id = (post as any)._id || post.id
+              try {
+                const { data } = await getComments(id, { page: nextPage })
+                setComments([...comments, ...data.items])
+                setNextPage(data.nextPage)
+              } finally {
+                setLoadingMore(false)
+              }
+            }}
+            disabled={loadingMore}
+            className="px-3 py-1 mb-4 rounded bg-gray-200 disabled:opacity-50"
+          >
+            {loadingMore ? 'Loading…' : 'Load more'}
+          </button>
+        )}
         {user ? (
           <form onSubmit={async e => {
             e.preventDefault()
