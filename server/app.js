@@ -14,9 +14,11 @@ const usersRoutes  = require('./routes/users');
 const commentsRoutes = require('./routes/comments');
 const mediaRoutes = require('./routes/media');
 const redirectRoutes = require('./routes/redirects');
+const sitemapRoutes = require('./routes/sitemap');
 const PostDraft = require('./models/PostDraft');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // CORS: front-end origin
 const ORIGIN = process.env.ALLOWED_ORIGIN || 'https://patwuaorg.onrender.com';
@@ -143,6 +145,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/users', mediaRoutes);
 app.use('/api/comments', commentsRoutes);
 app.use('/', redirectRoutes);
+app.use('/', sitemapRoutes);
 
 // Error handling (must be registered after all routes)
 app.use(errorHandler);
